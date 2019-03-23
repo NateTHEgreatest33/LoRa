@@ -150,7 +150,7 @@ bool LoraInitRx(void){
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-LoRaMode(): sets configuration register to 
+LoRaMode(): sets configuration register to specificed mode
 Inputs:
 - (uint8_t) mode: what mode to set, (See enum 'modes' at top of file)
 Outputs:
@@ -212,7 +212,7 @@ bool LoRaMode(uint8_t mode){
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-LoraSendMessage(): sets configuration register to 
+LoraSendMessage(): send message via LoRa
 Inputs:
 - (uint8_t) Message[]: to be sent (in byte array)
 - (uint8_t) number_of_bytes: number of bytes in Message
