@@ -27,10 +27,6 @@ enum modes{SLEEP, STBY, FSTX, TX, FSRX, RXCONTINUOUS, RXSINGLE, CAD};
 /* -----------------------------------------------------------------
  *			   Functions
  * -------------------------------------------------------------- */
-
-
-
-
 /* -----------------------------------------------------------------
 LoRaRead(): Reads from selected register and returns value
 Inputs:
