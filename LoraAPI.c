@@ -1,3 +1,6 @@
+/* -----------------------------------------------------------------
+ *			   Includes
+ * -------------------------------------------------------------- */
 #include <stdint.h>
 #include <stdbool.h>
 #include "inc/tm4c123gh6pm.h"
@@ -9,17 +12,26 @@
 #include "driverlib/i2c.h"
 #include "driverlib/pin_map.h"
 #include "driverlib/ssi.h"
-//defines
+
+/* -----------------------------------------------------------------
+ *			   Defintions
+ * -------------------------------------------------------------- */
 #define CONFIG_REG_ADDR 0x01
 #define LORA_FIFO_ADDR 0x00
-//#define IRQ_RX_REGISTER 0x12
+
+/* -----------------------------------------------------------------
+ *			   Variables
+ * -------------------------------------------------------------- */
 enum modes{SLEEP, STBY, FSTX, TX, FSRX, RXCONTINUOUS, RXSINGLE, CAD}; 
 
+/* -----------------------------------------------------------------
+ *			   Functions
+ * -------------------------------------------------------------- */
 
 
 
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+/* -----------------------------------------------------------------
 LoRaRead(): Reads from selected register and returns value
 Inputs:
 - (uint8_t) RegisterAddress_8bit: value of register you wish to read from
@@ -48,16 +60,16 @@ uint32_t loRaRead(uint8_t RegisterAddress_8bit){
 	return MessageReturn;
 }
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-loRaWrite(): writes to selected register with given data
-Inputs:
-- (uint8_t) RegisterAddress_8bit: value of register you wish to write to
-- (uint8_t) data8Bit: data to be writen to register
-Outputs:
-- n/a
-Notes:
-- uses PA3 as Chip select manually, PA3 must be configured as GPIO output pin
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/* -----------------------------------------------------------------
+ * loRaWrite(): writes to selected register with given data
+ * Inputs:
+ *   - (uint8_t) RegisterAddress_8bit: value of register you wish to write to
+ *   - (uint8_t) data8Bit: data to be writen to register
+ * Outputs:
+ *   - n/a
+ * Notes:
+ *   - uses PA3 as Chip select manually, PA3 must be configured as GPIO output pin
+ * -------------------------------------------------------------- */
 void loRaWrite(uint8_t RegisterAddress_8bit, volatile uint8_t data8Bit){
 	uint8_t clearFIFO = 0xFF;
 	uint32_t JUNKDATA = 0;
@@ -74,16 +86,16 @@ void loRaWrite(uint8_t RegisterAddress_8bit, volatile uint8_t data8Bit){
 	GPIO_PORTA_DATA_R |= 0x08;//toggle A3 high
 }
 
-
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-LoraInitTx(): Initilizes LoRa to Tx mode (Tx FIFO ptr, TX highpower mode, HighFreq) and puts tranciver into sleep mode
-Inputs:
-- n/a
-Outputs:
-- (bool) successfull or not
-Notes:
-- uses LoRaRead() and LoRaWrite() so their requirements must be met
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/* -----------------------------------------------------------------
+ * LoraInitTx(): Initilizes LoRa to Tx mode (Tx FIFO ptr, TX highpower mode, HighFreq) 
+ * and puts tranciver into sleep mode.
+ * Inputs:
+ *   - n/a
+ * Outputs:
+ *   - (bool) successfull or not
+ * Notes:
+ *   - uses LoRaRead() and LoRaWrite() so their requirements must be met
+ * -------------------------------------------------------------- */
 bool LoraInitTx(void){
 	uint8_t configRegisterData = 0x80;
 	uint8_t TxFifoInfo = 0x00;
@@ -112,15 +124,16 @@ bool LoraInitTx(void){
 	return true;
 }
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-LoraInitRx(): Initilizes LoRa to Tx mode (RX FIFO ptr, TX highpower mode, HighFreq) and puts tranciver into sleep mode
-Inputs:
-- n/a
-Outputs:
-- (bool) successfull or not
-Notes:
-- uses LoRaRead() and LoRaWrite() so their requirements must be met
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/* -----------------------------------------------------------------
+ * LoraInitRx(): Initilizes LoRa to Rx mode (RX FIFO ptr, TX highpower mode, HighFreq) 
+ * and puts tranciver into sleep mode.
+ * Inputs:
+ *   - n/a
+ * Outputs:
+ *   - (bool) successfull or not
+ * Notes:
+ *   - uses LoRaRead() and LoRaWrite() so their requirements must be met
+ * -------------------------------------------------------------- */
 bool LoraInitRx(void){
 	uint8_t configRegisterData = 0x80;
 	uint8_t RxFifoInfo = 0x00;
@@ -138,7 +151,7 @@ bool LoraInitRx(void){
 	if(highPowerMode != 0xFF){
 		return false;
 	}
-  //setup Rx fifoPtr
+  	//setup Rx fifoPtr
 	RxFifoInfo = loRaRead(0x0F); //Rx FIFO base addrss (should be 0x00)
 	loRaWrite(0x0D,RxFifoInfo);//0x00 is the start of RX buffer, 0x0D is the fifoPtr by default
 	RxFifoInfo = loRaRead(0x0D); //verify changes
@@ -148,16 +161,15 @@ bool LoraInitRx(void){
 	return true;
 }
 
-
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-LoRaMode(): sets configuration register to specificed mode
-Inputs:
-- (uint8_t) mode: what mode to set, (See enum 'modes' at top of file)
-Outputs:
-- (bool) successfull or not
-Notes:
-- uses LoRaRead() and LoRaWrite() so their requirements must be met
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/* -----------------------------------------------------------------
+ * LoRaMode(): sets configuration register to specificed mode
+ * Inputs:
+ *   - (uint8_t) mode: what mode to set, (See enum 'modes' at top of file)
+ * Outputs:
+ *   - (bool) successfull or not
+ * Notes:
+ *   - uses LoRaRead() and LoRaWrite() so their requirements must be met
+ * -------------------------------------------------------------- */
 bool LoRaMode(uint8_t mode){
 	uint8_t configReg = 0x00;
 	if(mode == SLEEP){
@@ -209,21 +221,19 @@ bool LoRaMode(uint8_t mode){
 	}
 }
 
-
-
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
-LoraSendMessage(): send message via LoRa
-Inputs:
-- (uint8_t) Message[]: to be sent (in byte array)
-- (uint8_t) number_of_bytes: number of bytes in Message
-Outputs:
-- (bool) successfull or not (message sent)
-Notes:
-- LoraInitTx OR LoraInitRx should have been ran at some time
-- uses LoRaRead() and LoRaWrite() so their requirements must be met
-Issues:
-- Will remain in function untill TxDone interrupt is generated (ie. can get stuck here!!)
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/* -----------------------------------------------------------------
+ * LoraSendMessage(): send message via LoRa
+ * Inputs:
+ *   - (uint8_t) Message[]: to be sent (in byte array)
+ *   - (uint8_t) number_of_bytes: number of bytes in Message
+ * Outputs:
+ *   - (bool) successfull or not (message sent)
+ * Notes:
+ *   - LoraInitTx OR LoraInitRx should have been ran at some time
+ *   - uses LoRaRead() and LoRaWrite() so their requirements must be met
+ * Issues:
+ *   - Will remain in function untill TxDone interrupt is generated (ie. can get stuck here!!)
+ * -------------------------------------------------------------- */
 bool LoraSendMessage(uint8_t Message[], uint8_t number_of_bytes){
 	//local variables
 	uint8_t configRegisterData = 0x00;
