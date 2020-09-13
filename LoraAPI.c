@@ -36,21 +36,33 @@ A3 is used as chip select, to change
 what pin is used, modify DATA_PIN
 and DATA_PIN_GROUP defines
 ----------------------------------*/
-#define  DATA_PIN            0x08                /* pin 3             */
-#define  DATA_PORT_GROUP     GPIO_PORTA_DATA_R   /* pin register A    */
+#define  SPI_SELECTED         ( SSI0_BASE )          /* SPI 0 selected    */
+#define  DATA_PIN             ( 0x08 )               /* pin 3             */
+#define  DATA_PORT_GROUP      ( GPIO_PORTA_DATA_R  ) /* pin register A    */
 
 
-#define  LORA_MAX_POWER_MODE 0xFF                /* max power output  */
+#define  LORA_MAX_POWER_MODE  ( 0xFF )              /* max power output  */
 
-#define  LORA_BASE_FIFO_ADD  0x00                /* base fifo address */
+#define  LORA_BASE_FIFO_ADD   ( 0x00 )              /* base fifo address */
 
-#define LORA_SLEEP_MODE      0x80                /* config register 
-                                                    sleep mode        */
+#define LORA_REGISTER_SELECT  ( 0x80 )              /* select lora
+                                                    registers            */
 
-#define LORA_STBY_MODE       0x01                /* config register 
-                                                    standby mode      */
+#define LORA_SLEEP_MODE      ( LORA_REGISTER_SELECT | MODE_SLEEP )
+                                                    /* config register 
+                                                    sleep mode           */
 
+#define LORA_STBY_MODE       ( LORA_REGISTER_SELECT | MODE_STBY )
+                                                    /* config register 
+                                                    standby mode        */
 
+#define LORA_TX_MODE         ( LORA_REGISTER_SELECT | MODE_TX )
+                                                    /* config register 
+                                                    tx mode             */
+
+#define  LORA_RX_DONE_MASK  ( 0x08 )              /* tx done mask       */
+
+#define SPI_WRITE_DATA_FLAG ( 0x80 )              /* SPI write flag     */
 
 /*--------------------------------------------------------------------
                                 TYPES
@@ -58,14 +70,14 @@ and DATA_PIN_GROUP defines
 typedef uint8_t lora_modes;       /* Operating Modes                  */
 enum 
     {
-    SLEEP,                      /* sleep mode                       */
-    STBY,                       /* standby mode                     */
-    FSTX,                       /* frequency sythesis transmit mode */
-    TX,                         /* transmit mode                    */
-    FSRX,                       /* frequency sythesis receive mode  */
-    RXCONTINUOUS,               /* continious receive mode          */
-    RXSINGLE,                   /* single receive mode              */
-    CAD                         /* preamble detect mode             */
+    MODE_SLEEP,                   /* sleep mode                       */
+    MODE_STBY,                    /* standby mode                     */
+    MODE_FSTX,                    /* frequency sythesis transmit mode */
+    MODE_TX,                      /* transmit mode                    */
+    MODE_FSRX,                    /* frequency sythesis receive mode  */
+    MODE_RXCONTINUOUS,            /* continious receive mode          */
+    MODE_RXSINGLE,                /* single receive mode              */
+    MODE_CAD                      /* preamble detect mode             */
     }; 
 
 typedef uint8_t lora_registers; /* lora registers                   */
@@ -149,32 +161,32 @@ while ( number_in_fifo != 0x00 )
 Toggle CS low and put request
 ----------------------------------------------------------*/
 DATA_PORT_GROUP &= ~( DATA_PIN );
-SSIDataPut( SSI0_BASE, register_address );
+SSIDataPut( SPI_SELECTED, register_address );
 
 /*----------------------------------------------------------
 Wait for operation to complete
 ----------------------------------------------------------*/
-while( SSIBusy( SSI0_BASE ) )
+while( SSIBusy( SPI_SELECTED ) )
     {
     }
 
 /*----------------------------------------------------------
 Put empty data to fill in timing gap and empty fifo
 ----------------------------------------------------------*/
-SSIDataPut( SSI0_BASE, 0x00 );
-SSIDataGet( SSI0_BASE, &message_return );
+SSIDataPut( SPI_SELECTED, 0x00 );
+SSIDataGet( SPI_SELECTED, &message_return );
 
 /*----------------------------------------------------------
 Wait for operation to complete
 ----------------------------------------------------------*/
-while( SSIBusy( SSI0_BASE ) )
+while( SSIBusy( SPI_SELECTED ) )
     {
     }
 
 /*----------------------------------------------------------
 Pull from fifo and toggle CS
 ----------------------------------------------------------*/
-SSIDataGet( SSI0_BASE, &message_return );
+SSIDataGet( SPI_SELECTED, &message_return );
 DATA_PORT_GROUP |= DATA_PIN;
 
 return message_return;
@@ -218,25 +230,25 @@ while ( number_in_fifo != 0x00 )
 /*----------------------------------------------------------
 Toggle CS low and put request
 ----------------------------------------------------------*/
-DATA_PORT_GROUP &= ~(DATA_PIN);
-SSIDataPut(SSI0_BASE, (0x80 | register_address));            //put register value (OR w/ x80 for write)
+DATA_PORT_GROUP &= ~( DATA_PIN );
+SSIDataPut( SPI_SELECTED, ( SPI_WRITE_DATA_FLAG | register_address ) );
 
 /*----------------------------------------------------------
 Wait for operation to complete
 ----------------------------------------------------------*/
-while( SSIBusy( SSI0_BASE ) )
+while( SSIBusy( SPI_SELECTED ) )
     {
     }
 
 /*----------------------------------------------------------
 Write data to register
 ----------------------------------------------------------*/
-SSIDataPut( SSI0_BASE, register_data );//put blank data for timing
+SSIDataPut( SPI_SELECTED, register_data );
 
 /*----------------------------------------------------------
 Wait for operation to complete
 ----------------------------------------------------------*/
-while( SSIBusy( SSI0_BASE ) )
+while( SSIBusy( SPI_SELECTED ) )
     {
     }
 
@@ -447,28 +459,25 @@ bool lora_send_message
 /*----------------------------------------------------------
 Local variables
 ----------------------------------------------------------*/
-uint8_t config_register_data;   /* config register data   */
 uint8_t fifo_ptr_address;       /* fifo pointer address   */
 int i;                          /* interator              */
 
 /*----------------------------------------------------------
 Initilize local variables
 ----------------------------------------------------------*/
-config_register_data  = 0x00;
 fifo_ptr_address      = 0x00;
 i                     = 0x00;
 	
 /*----------------------------------------------------------
 Put into standby mode to fill fifo
 ----------------------------------------------------------*/
-config_register_data = loRa_read_register( LORA_REGISTER_OP_MODE );
-config_register_data |= LORA_STBY_MODE;
-loRa_write_register( LORA_REGISTER_OP_MODE, config_register_data);
+loRa_write_register( LORA_REGISTER_OP_MODE, LORA_STBY_MODE);
 
 /*----------------------------------------------------------
 Reset TX fifo 
 ----------------------------------------------------------*/
 fifo_ptr_address = loRa_read_register( LORA_TX_FIFO_ADDR );
+
 loRa_write_register( LORA_FIFO_ADDR_PTR, fifo_ptr_address );
 
 if( loRa_read_register( LORA_FIFO_ADDR_PTR ) != fifo_ptr_address )
@@ -488,6 +497,7 @@ for( i = 0; i < number_of_bytes; i++ )
 Set payload length to numBytes and verify
 ----------------------------------------------------------*/
 loRa_write_register( LORA_PAYLOAD_SIZE, number_of_bytes );
+
 if( loRa_read_register( LORA_PAYLOAD_SIZE ) != number_of_bytes )
     {
     return false;
@@ -496,9 +506,9 @@ if( loRa_read_register( LORA_PAYLOAD_SIZE ) != number_of_bytes )
 /*----------------------------------------------------------
 Set into TX mode
 ----------------------------------------------------------*/
-config_register_data = 0x83;
-loRa_write_register( LORA_REGISTER_OP_MODE, config_register_data );
-if( loRa_read_register( LORA_REGISTER_OP_MODE ) != 0x83 )
+loRa_write_register( LORA_REGISTER_OP_MODE, LORA_TX_MODE );
+
+if( loRa_read_register( LORA_REGISTER_OP_MODE ) != LORA_TX_MODE )
     {
     return false;
     }
@@ -506,13 +516,14 @@ if( loRa_read_register( LORA_REGISTER_OP_MODE ) != 0x83 )
 /*----------------------------------------------------------
 Wait for TX to complete
 ----------------------------------------------------------*/
-while( ( loRa_read_register( LORA_REGISTER_FLAGS ) & 0x08 ) != 0x08)
+while( ( loRa_read_register( LORA_REGISTER_FLAGS ) & LORA_RX_DONE_MASK ) != LORA_RX_DONE_MASK )
     {
     }
 /*----------------------------------------------------------
 Clear IRQ flags
 ----------------------------------------------------------*/
-loRa_write_register( LORA_REGISTER_FLAGS, 0x08 );
+loRa_write_register( LORA_REGISTER_FLAGS, LORA_RX_DONE_MASK );
+
 if( loRa_read_register( LORA_REGISTER_FLAGS ) != 0x00 )
     {
     return false;
