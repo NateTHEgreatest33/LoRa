@@ -15,9 +15,6 @@
 /*--------------------------------------------------------------------
                            GENERAL INCLUDES
 --------------------------------------------------------------------*/
-#include <stdint.h>
-#include <stdbool.h>
-
 #include "driverlib/gpio.h"
 #include "driverlib/interrupt.h"
 #include "driverlib/i2c.h"
