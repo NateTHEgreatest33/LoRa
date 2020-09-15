@@ -28,6 +28,8 @@
 #include "inc/hw_types.h"
 #include "inc/tm4c123gh6pm.h"
 
+#include "LoraAPI.h"
+
 /*--------------------------------------------------------------------
                           LITERAL CONSTANTS
 --------------------------------------------------------------------*/
@@ -36,33 +38,49 @@ A3 is used as chip select, to change
 what pin is used, modify DATA_PIN
 and DATA_PIN_GROUP defines
 ----------------------------------*/
-#define  SPI_SELECTED         ( SSI0_BASE )          /* SPI 0 selected    */
-#define  DATA_PIN             ( 0x08 )               /* pin 3             */
-#define  DATA_PORT_GROUP      ( GPIO_PORTA_DATA_R  ) /* pin register A    */
+#define SPI_SELECTED            ( SSI0_BASE )          /* SPI 0 selected    */
+#define DATA_PIN                ( 0x08 )               /* pin 3             */
+#define DATA_PORT_GROUP         ( GPIO_PORTA_DATA_R )  /* pin register A    */
 
 
-#define  LORA_MAX_POWER_MODE  ( 0xFF )              /* max power output  */
+#define LORA_MAX_POWER_MODE     ( 0xFF )               /* max power output  */
 
-#define  LORA_BASE_FIFO_ADD   ( 0x00 )              /* base fifo address */
+#define LORA_BASE_FIFO_ADD      ( 0x00 )               /* base fifo address */
 
-#define LORA_REGISTER_SELECT  ( 0x80 )              /* select lora
-                                                    registers            */
+#define LORA_REGISTER_SELECT    ( 0x80 )               /* select lora
+                                                           registers        */
 
-#define LORA_SLEEP_MODE      ( LORA_REGISTER_SELECT | MODE_SLEEP )
-                                                    /* config register 
-                                                    sleep mode           */
+#define LORA_SLEEP_MODE         ( LORA_REGISTER_SELECT | MODE_SLEEP )
+                                                       /* config register 
+                                                          sleep mode        */
 
-#define LORA_STBY_MODE       ( LORA_REGISTER_SELECT | MODE_STBY )
-                                                    /* config register 
-                                                    standby mode        */
+#define LORA_STBY_MODE          ( LORA_REGISTER_SELECT | MODE_STBY )
+                                                       /* config register 
+                                                          standby mode      */
 
-#define LORA_TX_MODE         ( LORA_REGISTER_SELECT | MODE_TX )
-                                                    /* config register 
-                                                    tx mode             */
+#define LORA_TX_MODE            ( LORA_REGISTER_SELECT | MODE_TX )
+                                                       /* config register 
+                                                          tx mode           */
 
-#define  LORA_RX_DONE_MASK  ( 0x08 )              /* tx done mask       */
+#define LORA_TX_DONE_MASK       ( 0x08 )               /* tx done mask      */
 
-#define SPI_WRITE_DATA_FLAG ( 0x80 )              /* SPI write flag     */
+#define LORA_VALID_HEADER_MASK  ( 0x10 )               /* valid header mask */
+
+#define LORA_CRC_ERROR_MASK     ( 0x20 )               /* CRC error    mask */
+
+#define LORA_RX_DONE_MASK       ( 0x40 )               /* rx done mask      */
+
+#define LORA_RX_TIMEOUT_MASK    ( 0x80 )               /* rx timeout mask   */
+
+#define LORA_CLR_RX_ERR_FLAGS   ( LORA_RX_TIMEOUT_MASK | LORA_CRC_ERROR_MASK )
+                                                       /* clear error flags 
+                                                                       mask */
+
+#define LORA_CLR_RX_FLAG        ( LORA_RX_DONE_MASK | LORA_VALID_HEADER_MASK )
+                                                       /* clear rx flags 
+                                                                       mask */
+
+#define SPI_WRITE_DATA_FLAG     ( 0x80 )               /* SPI write flag    */
 
 /*--------------------------------------------------------------------
                                 TYPES
@@ -93,6 +111,7 @@ enum
                                       last rx'ed msg                */
     LORA_FLAGS_MASK       = 0x11,  /* masks for flag register       */
     LORA_REGISTER_FLAGS   = 0x12,  /* flags register                */
+    LORA_RX_COUNT         = 0x13,  /* rx byte count register        */
     LORA_PAYLOAD_SIZE     = 0x22   /* rx payload size register      */
            
     };
@@ -516,13 +535,13 @@ if( loRa_read_register( LORA_REGISTER_OP_MODE ) != LORA_TX_MODE )
 /*----------------------------------------------------------
 Wait for TX to complete
 ----------------------------------------------------------*/
-while( ( loRa_read_register( LORA_REGISTER_FLAGS ) & LORA_RX_DONE_MASK ) != LORA_RX_DONE_MASK )
+while( ( loRa_read_register( LORA_REGISTER_FLAGS ) & LORA_TX_DONE_MASK ) != LORA_TX_DONE_MASK )
     {
     }
 /*----------------------------------------------------------
 Clear IRQ flags
 ----------------------------------------------------------*/
-loRa_write_register( LORA_REGISTER_FLAGS, LORA_RX_DONE_MASK );
+loRa_write_register( LORA_REGISTER_FLAGS, LORA_TX_DONE_MASK );
 
 if( loRa_read_register( LORA_REGISTER_FLAGS ) != 0x00 )
     {
@@ -541,3 +560,119 @@ return true;
 *       recive message
 *
 *********************************************************************/
+bool lora_rx_message
+    (
+    uint8_t *message[],                /* pointer to return message */
+    uint8_t size_of_message,           /* array size of message[]   */
+    uint8_t *size,                     /* size of return message    */
+    lora_errors *error                 /* pointer to error variable */
+    )
+{
+/*----------------------------------------------------------
+Local variables
+----------------------------------------------------------*/
+uint8_t flag_register_data;      /* data of flag register */
+uint8_t rx_fifo_ptr;             /* rx fifo pointer       */
+int i;                           /* interator             */
+
+/*----------------------------------------------------------
+Initilize local variables
+----------------------------------------------------------*/
+flag_register_data  = 0x00;
+rx_fifo_ptr         = 0x00;
+i                   = 0x00;
+
+/*----------------------------------------------------------
+Initilize variables
+----------------------------------------------------------*/
+*lora_errors    = RX_NO_ERROR;
+*size           = 0;
+
+/*----------------------------------------------------------
+Determine status of Rx
+----------------------------------------------------------*/
+flag_register_data = loRa_read_register( LORA_REGISTER_FLAGS );
+
+/*----------------------------------------------------------
+Determine if error is present
+----------------------------------------------------------*/
+
+if ( flag_register_data & LORA_CRC_ERROR_MASK ) == LORA_CRC_ERROR_MASK )
+    {
+    *lora_errors = RX_CRC_ERROR;
+    }
+else ( flag_register_data & LORA_RX_TIMEOUT_MASK ) == LORA_RX_TIMEOUT_MASK )
+    {
+    *lora_errors = RX_TIMEOUT;
+    }
+/*----------------------------------------------------------
+If errors are present, clear
+
+-------->>>>>>NEED TO VERIFY single write does not clear all flags
+
+----------------------------------------------------------*/
+if ( *lora_errors != RX_NO_ERROR )
+    {
+    loRa_write_register( LORA_REGISTER_FLAGS, LORA_CLR_RX_ERR_FLAGS );
+    }
+
+/*----------------------------------------------------------
+Determine if message has been received
+----------------------------------------------------------*/
+if ( ( flag_register_data & LORA_RX_DONE_MASK ) == LORA_RX_DONE_MASK )
+    {
+    /*----------------------------------------------------------
+    Verify header
+    ----------------------------------------------------------*/
+    if ( flag_register_data & LORA_VALID_HEADER_MASK ) != LORA_VALID_HEADER_MASK )
+        {
+        *lora_errors = RX_INVALID_HEADER;
+        }
+    /*----------------------------------------------------------
+    get size
+    ----------------------------------------------------------*/
+    *size = loRa_read_register( LORA_RX_COUNT );
+
+    /*----------------------------------------------------------
+    Clear header and rx flag
+    ----------------------------------------------------------*/
+    loRa_write_register( LORA_REGISTER_FLAGS, LORA_CLR_RX_FLAG );
+
+    /*----------------------------------------------------------
+    Get fifo pointer and update addresss
+    ----------------------------------------------------------*/
+    rx_fifo_ptr = loRa_read_register( LORA_RX_CURR_ADDR );
+    loRa_write_register( LORA_FIFO_ADDR_PTR, rx_fifo_ptr );
+
+    /*----------------------------------------------------------
+    Verify message[] can fit message received
+    ----------------------------------------------------------*/
+    if( *size > size_of_message )
+        {
+        *lora_errors = RX_ARRAY_SIZE_ERR;
+        *size = 0;
+        }
+    else
+        {
+        /*----------------------------------------------------------
+        Tranfer message to array
+        ----------------------------------------------------------*/
+        for( i = 0; i < *size; i++ )
+            {
+            *message[i] = loRa_read_register( LORA_REGISTER_FIFO );
+            }
+        }
+
+    /*----------------------------------------------------------
+    Return true for message received
+    ----------------------------------------------------------*/
+    return true;
+    }
+else
+    {
+    /*----------------------------------------------------------
+    Return false for no message received
+    ----------------------------------------------------------*/
+    return false;
+    }
+} /* lora_rx_message() */
