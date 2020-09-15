@@ -282,14 +282,14 @@ DATA_PORT_GROUP |= DATA_PIN;
 /*********************************************************************
 *
 *   PROCEDURE NAME:
-*       lora_init_continious_tx
+*       lora_init_tx
 *
 *   DESCRIPTION:
 *       runs the proper steps to initilize lora into TX 
 *       continious mode
 *
 *********************************************************************/
-bool lora_init_continious_tx
+bool lora_init_tx
     (
     void
     )
@@ -366,20 +366,23 @@ if( tx_fifo_ptr != tx_fifo_ptr_verify )
     return false;
     }
 
+
+//add set mode
+
 return true;
-} /* lora_init_continious_tx() */
+} /* lora_init_tx() */
 
 /*********************************************************************
 *
 *   PROCEDURE NAME:
-*       lora_init_rx
+*       lora_init_continious_rx
 *
 *   DESCRIPTION:
 *       runs the proper steps to initilize lora into RX 
 *       continious mode
 *
 *********************************************************************/
-bool lora_init_rx
+bool lora_init_continious_rx
     (
     void
     )
@@ -456,9 +459,11 @@ if( rx_fifo_ptr != rx_fifo_ptr_verify )
     return false;
     }
 
+//add set mode
+
 return true;
 
-} /* lora_init_rx() */
+} /* lora_init_continious_rx() */
 
 /*********************************************************************
 *
@@ -549,18 +554,19 @@ if( loRa_read_register( LORA_REGISTER_FLAGS ) != 0x00 )
     }
 
 return true;
+
 } /* lora_send_message() */
 
 /*********************************************************************
 *
 *   PROCEDURE NAME:
-*       lora_rx_message
+*       lora_get_message
 *
 *   DESCRIPTION:
 *       recive message
 *
 *********************************************************************/
-bool lora_rx_message
+bool lora_get_message
     (
     uint8_t *message[],                /* pointer to return message */
     uint8_t size_of_message,           /* array size of message[]   */
@@ -675,4 +681,4 @@ else
     ----------------------------------------------------------*/
     return false;
     }
-} /* lora_rx_message() */
+} /* lora_get_message() */

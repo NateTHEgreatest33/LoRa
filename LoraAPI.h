@@ -48,7 +48,7 @@ enum
 /*--------------------------------------------------------------------
 loraAPI.c
 --------------------------------------------------------------------*/
-bool lora_init_continious_tx
+bool lora_init_tx
     (
     void
     );
@@ -59,7 +59,18 @@ bool lora_send_message
     uint8_t number_of_bytes               /* size of array          */
     );
 
-bool lora_rx_message
+bool lora_init_continious_rx
+    (
+    void
+    );
+
+bool lora_send_message
+    (
+    uint8_t Message[],                    /* array of bytes to send */
+    uint8_t number_of_bytes               /* size of array          */
+    );
+
+bool lora_get_message
     (
     uint8_t *message[],                /* pointer to return message */
     uint8_t size_of_message,           /* array size of message[]   */
@@ -67,4 +78,4 @@ bool lora_rx_message
     lora_errors *error                 /* pointer to error variable */
     );
 
-#endif /* LoraAPI.h */
+/* LoraAPI.h */
