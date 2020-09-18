@@ -30,6 +30,11 @@ enum
     RX_INVALID_HEADER,                /* RX Invalid header          */
     RX_ARRAY_SIZE_ERR,                /* message is too big for passed
                                          in array                   */
+    RX_DOUBLE,                        /* more than one message was 
+                                         received at once           */
+    RX_SIZING,                        /* less than one message was 
+                                         received at once           */
+    RX_KEY_ERR,                       /* Invalid key                */
     SPI_ERROR                         /* SPI comm error             */
     }; 
 
@@ -54,12 +59,6 @@ loraAPI.c
 bool lora_init_tx
     (
     void
-    );
-
-bool lora_send_message
-    (
-    uint8_t Message[],                    /* array of bytes to send */
-    uint8_t number_of_bytes               /* size of array          */
     );
 
 bool lora_init_continious_rx
