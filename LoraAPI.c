@@ -174,7 +174,7 @@ Read from fifo until empty
 ----------------------------------------------------------*/
 while ( number_in_fifo != 0x00 )
     {
-    number_in_fifo = SSIDataGetNonBlocking( SSI0_BASE, &message_return );
+    number_in_fifo = SSIDataGetNonBlocking( SPI_SELECTED, &message_return );
     }
 
 /*----------------------------------------------------------
@@ -245,7 +245,7 @@ Read from fifo until empty
 ----------------------------------------------------------*/
 while ( number_in_fifo != 0x00 )
     {
-    number_in_fifo = SSIDataGetNonBlocking( SSI0_BASE, &message_return );
+    number_in_fifo = SSIDataGetNonBlocking( SPI_SELECTED, &message_return );
     }
 /*----------------------------------------------------------
 Toggle CS low and put request
