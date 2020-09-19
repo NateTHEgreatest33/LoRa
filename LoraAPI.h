@@ -35,6 +35,7 @@ enum
     RX_SIZING,                        /* less than one message was 
                                          received at once           */
     RX_KEY_ERR,                       /* Invalid key                */
+    RX_INIT_ERR,                      /* Error initing rx mode      */
     SPI_ERROR                         /* SPI comm error             */
     }; 
 

@@ -59,6 +59,10 @@ and DATA_PIN_GROUP defines
                                                        /* config register 
                                                           tx mode           */
 
+#define LORA_RX_CONT_MODE       ( LORA_REGISTER_SELECT | MODE_RXCONTINUOUS )
+                                                       /* config register rx
+                                                          continious mode   */
+
 #define LORA_TX_DONE_MASK       ( 0x08 )               /* tx done mask      */
 
 #define LORA_VALID_HEADER_MASK  ( 0x10 )               /* valid header mask */
@@ -456,7 +460,15 @@ if( rx_fifo_ptr != rx_fifo_ptr_verify )
     return false;
     }
 
-//add set mode
+/*----------------------------------------------------------
+Set into RX continious mode and verify 
+----------------------------------------------------------*/
+loRa_write_register(LORA_REGISTER_OP_MODE, LORA_RX_CONT_MODE);
+
+if( loRa_read_register( LORA_REGISTER_OP_MODE ) !=  LORA_RX_CONT_MODE )
+    {
+    return false;
+    }
 
 return true;
 
