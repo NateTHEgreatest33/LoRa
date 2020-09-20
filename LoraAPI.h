@@ -75,7 +75,7 @@ bool lora_send_message
 
 bool lora_get_message
     (
-    uint8_t *message[],                /* pointer to return message */
+    uint8_t *message,                  /* pointer to return message */
     uint8_t size_of_message,           /* array size of message[]   */
     uint8_t *size,                     /* size of return message    */
     lora_errors *error                 /* pointer to error variable */

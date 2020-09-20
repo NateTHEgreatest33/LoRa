@@ -15,6 +15,9 @@
 /*--------------------------------------------------------------------
                            GENERAL INCLUDES
 --------------------------------------------------------------------*/
+#include <stdint.h>
+#include <stdbool.h>
+
 #include "driverlib/gpio.h"
 #include "driverlib/interrupt.h"
 #include "driverlib/i2c.h"
@@ -299,7 +302,6 @@ bool lora_init_tx
 Local variables
 ----------------------------------------------------------*/
 uint8_t config_register_data; /* configuration data       */
-uint8_t return_data;          /* return data              */
 uint8_t tx_fifo_ptr;          /* tx fifo pointer          */
 uint8_t tx_fifo_ptr_verify;   /* tx fifo pointer verify   */
 uint8_t power_modes;          /* power modes data         */
@@ -367,8 +369,15 @@ if( tx_fifo_ptr != tx_fifo_ptr_verify )
     return false;
     }
 
+/*----------------------------------------------------------
+Set into TX mode and verify 
+----------------------------------------------------------*/
+loRa_write_register(LORA_REGISTER_OP_MODE, LORA_TX_MODE);
 
-//add set mode
+if( loRa_read_register( LORA_REGISTER_OP_MODE ) !=  LORA_TX_MODE )
+    {
+    return false;
+    }
 
 return true;
 } /* lora_init_tx() */
@@ -392,7 +401,6 @@ bool lora_init_continious_rx
 Local variables
 ----------------------------------------------------------*/
 uint8_t config_register_data; /* configuration data       */
-uint8_t return_data;          /* return data              */
 uint8_t rx_fifo_ptr;          /* rx fifo pointer          */
 uint8_t rx_fifo_ptr_verify;   /* rx fifo pointer verify   */
 uint8_t power_modes;          /* power modes data         */
@@ -577,7 +585,7 @@ return true;
 *********************************************************************/
 bool lora_get_message
     (
-    uint8_t *message[],                /* pointer to return message */
+    uint8_t *message,                  /* pointer to return message */
     uint8_t size_of_message,           /* array size of message[]   */
     uint8_t *size,                     /* size of return message    */
     lora_errors *error                 /* pointer to error variable */
@@ -600,7 +608,7 @@ i                   = 0x00;
 /*----------------------------------------------------------
 Initilize variables
 ----------------------------------------------------------*/
-*lora_errors    = RX_NO_ERROR;
+*error    = RX_NO_ERROR;
 *size           = 0;
 
 /*----------------------------------------------------------
@@ -612,13 +620,13 @@ flag_register_data = loRa_read_register( LORA_REGISTER_FLAGS );
 Determine if error is present
 ----------------------------------------------------------*/
 
-if ( flag_register_data & LORA_CRC_ERROR_MASK ) == LORA_CRC_ERROR_MASK )
+if ( ( flag_register_data & LORA_CRC_ERROR_MASK ) == LORA_CRC_ERROR_MASK )
     {
-    *lora_errors = RX_CRC_ERROR;
+    *error = RX_CRC_ERROR;
     }
-else ( flag_register_data & LORA_RX_TIMEOUT_MASK ) == LORA_RX_TIMEOUT_MASK )
+else if ( ( flag_register_data & LORA_RX_TIMEOUT_MASK ) == LORA_RX_TIMEOUT_MASK )
     {
-    *lora_errors = RX_TIMEOUT;
+    *error = RX_TIMEOUT;
     }
 /*----------------------------------------------------------
 If errors are present, clear
@@ -626,7 +634,7 @@ If errors are present, clear
 -------->>>>>>NEED TO VERIFY single write does not clear all flags
 
 ----------------------------------------------------------*/
-if ( *lora_errors != RX_NO_ERROR )
+if ( *error != RX_NO_ERROR )
     {
     loRa_write_register( LORA_REGISTER_FLAGS, LORA_CLR_RX_ERR_FLAGS );
     }
@@ -639,9 +647,9 @@ if ( ( flag_register_data & LORA_RX_DONE_MASK ) == LORA_RX_DONE_MASK )
     /*----------------------------------------------------------
     Verify header
     ----------------------------------------------------------*/
-    if ( flag_register_data & LORA_VALID_HEADER_MASK ) != LORA_VALID_HEADER_MASK )
+    if ( ( flag_register_data & LORA_VALID_HEADER_MASK ) != LORA_VALID_HEADER_MASK )
         {
-        *lora_errors = RX_INVALID_HEADER;
+        *error = RX_INVALID_HEADER;
         }
     /*----------------------------------------------------------
     get size
@@ -664,7 +672,7 @@ if ( ( flag_register_data & LORA_RX_DONE_MASK ) == LORA_RX_DONE_MASK )
     ----------------------------------------------------------*/
     if( *size > size_of_message )
         {
-        *lora_errors = RX_ARRAY_SIZE_ERR;
+        *error = RX_ARRAY_SIZE_ERR;
         *size = 0;
         }
     else
@@ -674,7 +682,7 @@ if ( ( flag_register_data & LORA_RX_DONE_MASK ) == LORA_RX_DONE_MASK )
         ----------------------------------------------------------*/
         for( i = 0; i < *size; i++ )
             {
-            *message[i] = loRa_read_register( LORA_REGISTER_FIFO );
+            message[i] = loRa_read_register( LORA_REGISTER_FIFO );
             }
         }
 
