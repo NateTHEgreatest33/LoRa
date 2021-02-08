@@ -39,6 +39,13 @@ enum
     SPI_ERROR                         /* SPI comm error             */
     }; 
 
+typedef struct 
+    {
+    uint8_t SSI_BASE;                     /* SPI interface selected */
+    uint8_t SSI_PORT;                     /* SPI pin selected       */
+    uint8_t SSI_PIN;                      /* PI port selected       */             
+    } lora_config;                        /* SPI interface info     */
+
 /*--------------------------------------------------------------------
                            MEMORY CONSTANTS
 --------------------------------------------------------------------*/
@@ -59,12 +66,12 @@ loraAPI.c
 --------------------------------------------------------------------*/
 bool lora_init_tx
     (
-    void
+    lora_config config_data;                 /* SPI Interface info  */
     );
 
 bool lora_init_continious_rx
     (
-    void
+    lora_config config_data;                 /* SPI Interface info  */
     );
 
 bool lora_send_message
