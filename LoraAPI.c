@@ -79,17 +79,17 @@
 /*--------------------------------------------------------------------
                                 TYPES
 --------------------------------------------------------------------*/
-typedef uint8_t lora_modes;       /* Operating Modes                  */
+typedef uint8_t lora_modes;     /* Operating Modes                  */
 enum 
     {
-    MODE_SLEEP,                   /* sleep mode                       */
-    MODE_STBY,                    /* standby mode                     */
-    MODE_FSTX,                    /* frequency sythesis transmit mode */
-    MODE_TX,                      /* transmit mode                    */
-    MODE_FSRX,                    /* frequency sythesis receive mode  */
-    MODE_RXCONTINUOUS,            /* continious receive mode          */
-    MODE_RXSINGLE,                /* single receive mode              */
-    MODE_CAD                      /* preamble detect mode             */
+    MODE_SLEEP,                 /* sleep mode                       */
+    MODE_STBY,                  /* standby mode                     */
+    MODE_FSTX,                  /* frequency sythesis transmit mode */
+    MODE_TX,                    /* transmit mode                    */
+    MODE_FSRX,                  /* frequency sythesis receive mode  */
+    MODE_RXCONTINUOUS,          /* continious receive mode          */
+    MODE_RXSINGLE,              /* single receive mode              */
+    MODE_CAD                    /* preamble detect mode             */
     }; 
 
 typedef uint8_t lora_registers; /* lora registers                   */
