@@ -64,14 +64,19 @@ typedef struct
 /*--------------------------------------------------------------------
 loraAPI.c
 --------------------------------------------------------------------*/
-bool lora_init_tx
+void lora_port_init
     (
     lora_config config_data;                 /* SPI Interface info  */
     );
 
+bool lora_init_tx
+    (
+    void
+    );
+
 bool lora_init_continious_rx
     (
-    lora_config config_data;                 /* SPI Interface info  */
+    void
     );
 
 bool lora_send_message

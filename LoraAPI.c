@@ -116,9 +116,10 @@ enum
 /*--------------------------------------------------------------------
                               VARIABLES
 --------------------------------------------------------------------*/
-static uint8_t spi_selected;           /* SPI interface selected    */
-static uint8_t data_pin;               /* SPI pin selected          */
-static uint8_t data_port;              /* SPI port selected         */
+static uint8_t s_spi_selected = NULL;  /* SPI interface selected    */
+static uint8_t s_data_pin     = NULL;  /* SPI pin selected          */
+static uint8_t s_data_port    = NULL;  /* SPI port selected         */
+static bool s_port_inited     = false; /* Port selected T/F         */
 
 /*--------------------------------------------------------------------
                                 MACROS
@@ -137,7 +138,6 @@ void loRa_write_register
     lora_registers  register_address,           /* register address */
     uint8_t         register_data               /* register data    */
     );
-
 
 /*********************************************************************
 *
@@ -170,40 +170,40 @@ Read from fifo until empty
 ----------------------------------------------------------*/
 while ( number_in_fifo != 0x00 )
     {
-    number_in_fifo = SSIDataGetNonBlocking( spi_selected, &message_return );
+    number_in_fifo = SSIDataGetNonBlocking( s_spi_selected, &message_return );
     }
 
 /*----------------------------------------------------------
 Toggle CS low and put request
 ----------------------------------------------------------*/
-data_port &= ~( data_pin );
-SSIDataPut( spi_selected, register_address );
+s_data_port &= ~( s_data_pin );
+SSIDataPut( s_spi_selected, register_address );
 
 /*----------------------------------------------------------
 Wait for operation to complete
 ----------------------------------------------------------*/
-while( SSIBusy( spi_selected ) )
+while( SSIBusy( s_spi_selected ) )
     {
     }
 
 /*----------------------------------------------------------
 Put empty data to fill in timing gap and empty fifo
 ----------------------------------------------------------*/
-SSIDataPut( spi_selected, 0x00 );
-SSIDataGet( spi_selected, &message_return );
+SSIDataPut( s_spi_selected, 0x00 );
+SSIDataGet( s_spi_selected, &message_return );
 
 /*----------------------------------------------------------
 Wait for operation to complete
 ----------------------------------------------------------*/
-while( SSIBusy( spi_selected ) )
+while( SSIBusy( s_spi_selected ) )
     {
     }
 
 /*----------------------------------------------------------
 Pull from fifo and toggle CS
 ----------------------------------------------------------*/
-SSIDataGet( spi_selected, &message_return );
-data_port |= data_pin;
+SSIDataGet( s_spi_selected, &message_return );
+s_data_port |= s_data_pin;
 
 return message_return;
 
@@ -241,39 +241,67 @@ Read from fifo until empty
 ----------------------------------------------------------*/
 while ( number_in_fifo != 0x00 )
     {
-    number_in_fifo = SSIDataGetNonBlocking( spi_selected, &message_return );
+    number_in_fifo = SSIDataGetNonBlocking( s_spi_selected, &message_return );
     }
 /*----------------------------------------------------------
 Toggle CS low and put request
 ----------------------------------------------------------*/
-data_port &= ~( data_pin );
-SSIDataPut( spi_selected, ( SPI_WRITE_DATA_FLAG | register_address ) );
+s_data_port &= ~( s_data_pin );
+SSIDataPut( s_spi_selected, ( SPI_WRITE_DATA_FLAG | register_address ) );
 
 /*----------------------------------------------------------
 Wait for operation to complete
 ----------------------------------------------------------*/
-while( SSIBusy( spi_selected ) )
+while( SSIBusy( s_spi_selected ) )
     {
     }
 
 /*----------------------------------------------------------
 Write data to register
 ----------------------------------------------------------*/
-SSIDataPut( spi_selected, register_data );
+SSIDataPut( s_spi_selected, register_data );
 
 /*----------------------------------------------------------
 Wait for operation to complete
 ----------------------------------------------------------*/
-while( SSIBusy( spi_selected ) )
+while( SSIBusy( s_spi_selected ) )
     {
     }
 
 /*----------------------------------------------------------
 Toggle CS
 ----------------------------------------------------------*/
-data_port |= data_pin;
+s_data_port |= s_data_pin;
 
 } /* loRa_write_register() */
+
+/*********************************************************************
+*
+*   PROCEDURE NAME:
+*       lora_port_init
+*
+*   DESCRIPTION:
+*       initize port used for LoRa data tranmission 
+*
+*********************************************************************/
+void lora_port_init
+    (
+    lora_config config_data;                 /* SPI Interface info  */
+    )
+{
+/*----------------------------------------------------------
+Initilize static variables
+----------------------------------------------------------*/
+s_spi_selected = config_data.SSI_BASE;
+s_data_pin     = config_data.SSI_PORT;
+s_data_port    = config_data.SSI_PIN;
+
+/*----------------------------------------------------------
+Set port init variable to true for other functions
+----------------------------------------------------------*/
+s_port_inited = true;
+
+}
 
 
 /*********************************************************************
@@ -288,7 +316,7 @@ data_port |= data_pin;
 *********************************************************************/
 bool lora_init_tx
     (
-    lora_config config_data;        /* SPI Interface info  */
+    void
     )
 {
 /*----------------------------------------------------------
@@ -316,9 +344,14 @@ config_register_data  = LORA_SLEEP_MODE;
 tx_fifo_ptr           = 0x00;
 tx_fifo_ptr_verify    = 0x00;
 power_modes           = 0x00;
-spi_selected          = config_data.SSI_BASE;
-data_pin              = config_data.SSI_PORT;
-data_port             = config_data.SSI_PIN;
+
+/*----------------------------------------------------------
+Verify port selection has been made 
+----------------------------------------------------------*/
+if ( !s_port_inited )
+    {
+    return false;
+    }
 
 /*----------------------------------------------------------
 Configure into LoRa sleep mode and verify
@@ -390,7 +423,7 @@ return true;
 *********************************************************************/
 bool lora_init_continious_rx
     (
-    lora_config config_data;       /* SPI Interface info  */
+    void
     )
 {
 /*----------------------------------------------------------
@@ -418,9 +451,14 @@ config_register_data  = LORA_SLEEP_MODE;
 rx_fifo_ptr           = 0x00;
 rx_fifo_ptr_verify    = 0x00;
 power_modes           = 0x00;
-spi_selected          = config_data.SSI_BASE;
-data_pin              = config_data.SSI_PORT;
-data_port             = config_data.SSI_PIN;
+
+/*----------------------------------------------------------
+Verify port selection has been made 
+----------------------------------------------------------*/
+if ( !s_port_inited )
+    {
+    return false;
+    }
 
 /*----------------------------------------------------------
 Configure into LoRa sleep mode and verify
