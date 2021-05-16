@@ -286,7 +286,7 @@ s_data_port |= s_data_pin;
 *********************************************************************/
 void lora_port_init
     (
-    lora_config config_data;                 /* SPI Interface info  */
+    lora_config config_data                  /* SPI Interface info  */
     )
 {
 /*----------------------------------------------------------

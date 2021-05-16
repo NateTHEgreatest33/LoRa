@@ -66,7 +66,7 @@ loraAPI.c
 --------------------------------------------------------------------*/
 void lora_port_init
     (
-    lora_config config_data;                 /* SPI Interface info  */
+    lora_config config_data                  /* SPI Interface info  */
     );
 
 bool lora_init_tx
