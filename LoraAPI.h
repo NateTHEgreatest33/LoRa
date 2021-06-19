@@ -12,6 +12,7 @@
 --------------------------------------------------------------------*/
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 /*--------------------------------------------------------------------
                           LITERAL CONSTANTS
@@ -41,9 +42,9 @@ enum
 
 typedef struct 
     {
-    uint8_t SSI_BASE;                     /* SPI interface selected */
-    uint8_t SSI_PORT;                     /* SPI pin selected       */
-    uint8_t SSI_PIN;                      /* PI port selected       */             
+    uint32_t SSI_BASE;                    /* SPI interface selected */
+    uint8_t  SSI_PORT;                    /* SPI pin selected       */
+    uint8_t  SSI_PIN;                     /* PI port selected       */             
     } lora_config;                        /* SPI interface info     */
 
 /*--------------------------------------------------------------------
