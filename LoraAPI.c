@@ -116,10 +116,11 @@ enum
 /*--------------------------------------------------------------------
                               VARIABLES
 --------------------------------------------------------------------*/
-static uint8_t s_spi_selected = NULL;  /* SPI interface selected    */
-static uint8_t s_data_pin     = NULL;  /* SPI pin selected          */
-static uint8_t s_data_port    = NULL;  /* SPI port selected         */
-static bool s_port_inited     = false; /* Port selected T/F         */
+static uint32_t s_spi_selected    = NULL;  /* SPI interface selected    */
+static uint8_t s_data_pin         = NULL;  /* SPI pin selected          */
+//static uint8_t s_data_port  = NULL;      /* SPI port selected         */
+#define s_data_port      ( GPIO_PORTA_DATA_R ) /* SPI CS Port           */
+static bool s_port_inited         = false; /* Port selected T/F         */
 
 /*--------------------------------------------------------------------
                                 MACROS
@@ -162,8 +163,8 @@ uint8_t     number_in_fifo;  /* how many items remain in fifo */
 /*----------------------------------------------------------
 Initilize local variables
 ----------------------------------------------------------*/
-message_return   = 0xFF;
-number_in_fifo   = 0;
+message_return   = 0x00;
+number_in_fifo   = 0xFF;
 
 /*----------------------------------------------------------
 Read from fifo until empty
@@ -233,8 +234,8 @@ uint8_t     number_in_fifo;  /* how many items remain in fifo */
 /*----------------------------------------------------------
 Initilize local variables
 ----------------------------------------------------------*/
-message_return   = 0xFF;
-number_in_fifo   = 0;
+message_return   = 0x00;
+number_in_fifo   = 0xFF;
 
 /*----------------------------------------------------------
 Read from fifo until empty
@@ -273,6 +274,15 @@ Toggle CS
 ----------------------------------------------------------*/
 s_data_port |= s_data_pin;
 
+/*----------------------------------------------------------
+Add delay if changing modes since this takes longer
+----------------------------------------------------------*/
+if ( register_address == LORA_REGISTER_OP_MODE )
+	{
+	SysCtlDelay(2000000);
+	}
+
+	
 } /* loRa_write_register() */
 
 /*********************************************************************
@@ -293,8 +303,17 @@ void lora_port_init
 Initilize static variables
 ----------------------------------------------------------*/
 s_spi_selected = config_data.SSI_BASE;
-s_data_pin     = config_data.SSI_PORT;
-s_data_port    = config_data.SSI_PIN;
+s_data_pin = config_data.SSI_PIN;
+
+/*----------------------------------------------------------
+Verify port A selected for CS as it is the only port
+currently supported
+----------------------------------------------------------*/
+if( config_data.SSI_PORT != PORT_A )
+    {
+    s_port_inited = false;
+    return;
+    }
 
 /*----------------------------------------------------------
 Set port init variable to true for other functions
@@ -324,7 +343,7 @@ Local variables
 ----------------------------------------------------------*/
 uint8_t config_register_data; /* configuration data       */
 uint8_t tx_fifo_ptr;          /* tx fifo pointer          */
-uint8_t tx_fifo_ptr_verify;   /* tx fifo pointer verify   */
+uint8_t return_value_verify;  /* verification value       */
 uint8_t power_modes;          /* power modes data         */
 
 /*----------------------------------------------------------
@@ -342,7 +361,7 @@ config register bit defintions:
 --------------------------------*/
 config_register_data  = LORA_SLEEP_MODE;
 tx_fifo_ptr           = 0x00;
-tx_fifo_ptr_verify    = 0x00;
+return_value_verify   = 0x00;
 power_modes           = 0x00;
 
 /*----------------------------------------------------------
@@ -392,22 +411,28 @@ and set LORA_FIFO_ADDR_PTR accordingly.
 tx_fifo_ptr = loRa_read_register ( LORA_TX_FIFO_ADDR );
 loRa_write_register( LORA_FIFO_ADDR_PTR, tx_fifo_ptr );
 
-tx_fifo_ptr_verify = loRa_read_register( LORA_FIFO_ADDR_PTR );
-if( tx_fifo_ptr != tx_fifo_ptr_verify )
+return_value_verify = loRa_read_register( LORA_FIFO_ADDR_PTR );
+if( tx_fifo_ptr != return_value_verify )
     {
     return false;
     }
 
 /*----------------------------------------------------------
-Set into TX mode and verify 
+Set into TX mode and verify
+
+NOTE:
+    We very mode is TX or Standby as after a succuessfull tx,
+		we will enter standby mode
 ----------------------------------------------------------*/
 loRa_write_register(LORA_REGISTER_OP_MODE, LORA_TX_MODE);
-
-if( loRa_read_register( LORA_REGISTER_OP_MODE ) !=  LORA_TX_MODE )
+return_value_verify = loRa_read_register( LORA_REGISTER_OP_MODE );
+		
+if( return_value_verify !=  LORA_TX_MODE && 
+    return_value_verify !=  LORA_STBY_MODE  )
     {
     return false;
     }
-
+		
 return true;
 } /* lora_init_tx() */
 
@@ -431,7 +456,7 @@ Local variables
 ----------------------------------------------------------*/
 uint8_t config_register_data; /* configuration data       */
 uint8_t rx_fifo_ptr;          /* rx fifo pointer          */
-uint8_t rx_fifo_ptr_verify;   /* rx fifo pointer verify   */
+uint8_t return_value_verify;  /* verification value       */
 uint8_t power_modes;          /* power modes data         */
 
 /*----------------------------------------------------------
@@ -449,7 +474,7 @@ config register bit defintions:
 --------------------------------*/
 config_register_data  = LORA_SLEEP_MODE;
 rx_fifo_ptr           = 0x00;
-rx_fifo_ptr_verify    = 0x00;
+return_value_verify   = 0x00;
 power_modes           = 0x00;
 
 /*----------------------------------------------------------
@@ -464,8 +489,8 @@ if ( !s_port_inited )
 Configure into LoRa sleep mode and verify
 ----------------------------------------------------------*/
 loRa_write_register( LORA_REGISTER_OP_MODE, config_register_data );
-
-config_register_data = loRa_read_register( LORA_REGISTER_OP_MODE ); 
+		
+config_register_data = loRa_read_register( LORA_REGISTER_OP_MODE );		
 
 if ( config_register_data != LORA_SLEEP_MODE )
     {
@@ -499,8 +524,8 @@ and set LORA_FIFO_ADDR_PTR accordingly.
 rx_fifo_ptr = loRa_read_register ( LORA_RX_FIFO_ADDR );
 loRa_write_register( LORA_FIFO_ADDR_PTR, rx_fifo_ptr );
 
-rx_fifo_ptr_verify = loRa_read_register( LORA_FIFO_ADDR_PTR );
-if( rx_fifo_ptr != rx_fifo_ptr_verify )
+return_value_verify = loRa_read_register( LORA_FIFO_ADDR_PTR );
+if( rx_fifo_ptr != return_value_verify )
     {
     return false;
     }
@@ -509,8 +534,9 @@ if( rx_fifo_ptr != rx_fifo_ptr_verify )
 Set into RX continious mode and verify 
 ----------------------------------------------------------*/
 loRa_write_register(LORA_REGISTER_OP_MODE, LORA_RX_CONT_MODE);
+return_value_verify = loRa_read_register( LORA_REGISTER_OP_MODE );
 
-if( loRa_read_register( LORA_REGISTER_OP_MODE ) !=  LORA_RX_CONT_MODE )
+if( return_value_verify !=  LORA_RX_CONT_MODE )
     {
     return false;
     }

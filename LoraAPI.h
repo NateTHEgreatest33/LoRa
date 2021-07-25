@@ -22,6 +22,19 @@
 /*--------------------------------------------------------------------
                                 TYPES
 --------------------------------------------------------------------*/
+typedef uint8_t CS_port;       /* Error Codes                */
+enum 
+    {
+    PORT_A,
+    PORT_B,
+    PORT_C,
+    PORT_D,
+    PORT_E,
+    PORT_F
+    }; 
+
+
+
 typedef uint8_t lora_errors;       /* Error Codes                */
 enum 
     {
@@ -43,7 +56,7 @@ enum
 typedef struct 
     {
     uint32_t SSI_BASE;                    /* SPI interface selected */
-    uint8_t  SSI_PORT;                    /* SPI pin selected       */
+    CS_port SSI_PORT;                     /* SPI pin selected       */
     uint8_t  SSI_PIN;                     /* PI port selected       */             
     } lora_config;                        /* SPI interface info     */
 
