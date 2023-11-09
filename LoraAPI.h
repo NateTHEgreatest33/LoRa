@@ -14,6 +14,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "hardware/spi.h"
+
 /*--------------------------------------------------------------------
                           LITERAL CONSTANTS
 --------------------------------------------------------------------*/
@@ -22,19 +24,6 @@
 /*--------------------------------------------------------------------
                                 TYPES
 --------------------------------------------------------------------*/
-typedef uint8_t CS_port;       /* Error Codes                */
-enum 
-    {
-    PORT_A,
-    PORT_B,
-    PORT_C,
-    PORT_D,
-    PORT_E,
-    PORT_F
-    }; 
-
-
-
 typedef uint8_t lora_errors;       /* Error Codes                */
 enum 
     {
@@ -52,13 +41,6 @@ enum
     RX_INIT_ERR,                      /* Error initing rx mode      */
     SPI_ERROR                         /* SPI comm error             */
     }; 
-
-typedef struct 
-    {
-    uint32_t SSI_BASE;                    /* SPI interface selected */
-    CS_port SSI_PORT;                     /* SPI pin selected       */
-    uint8_t  SSI_PIN;                     /* PI port selected       */             
-    } lora_config;                        /* SPI interface info     */
 
 /*--------------------------------------------------------------------
                            MEMORY CONSTANTS
@@ -80,7 +62,7 @@ loraAPI.c
 --------------------------------------------------------------------*/
 void lora_port_init
     (
-    lora_config config_data                  /* SPI Interface info  */
+    spi_inst_t *spi                  /* SPI Interface info  */
     );
 
 bool lora_init_tx

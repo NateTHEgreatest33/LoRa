@@ -17,7 +17,6 @@
 --------------------------------------------------------------------*/
 #include <stdint.h>
 #include <stdbool.h>
-
 #include "pico/stdlib.h"
 #include "pico/cyw43_arch.h"
 
