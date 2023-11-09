@@ -18,15 +18,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "driverlib/gpio.h"
-#include "driverlib/interrupt.h"
-#include "driverlib/i2c.h"
-#include "driverlib/pin_map.h"
-#include "driverlib/ssi.h"
-#include "driverlib/sysctl.h"
-#include "inc/hw_memmap.h"
-#include "inc/hw_types.h"
-#include "inc/tm4c123gh6pm.h"
+#include "pico/stdlib.h"
+#include "pico/cyw43_arch.h"
 
 #include "LoraAPI.h"
 
@@ -116,10 +109,7 @@ enum
 /*--------------------------------------------------------------------
                               VARIABLES
 --------------------------------------------------------------------*/
-static uint32_t s_spi_selected    = NULL;  /* SPI interface selected    */
-static uint8_t s_data_pin         = NULL;  /* SPI pin selected          */
-//static uint8_t s_data_port  = NULL;      /* SPI port selected         */
-#define s_data_port      ( GPIO_PORTA_DATA_R ) /* SPI CS Port           */
+static spi_inst_t* s_spi_selected = NULL;  /* SPI interface selected    */
 static bool s_port_inited         = false; /* Port selected T/F         */
 
 /*--------------------------------------------------------------------
@@ -129,7 +119,7 @@ static bool s_port_inited         = false; /* Port selected T/F         */
 /*--------------------------------------------------------------------
                               PROCEDURES
 --------------------------------------------------------------------*/
-uint32_t loRa_read_register
+uint8_t loRa_read_register
     (
     lora_registers register_address             /* register address */
     );
@@ -149,7 +139,7 @@ void loRa_write_register
 *       Reads from selected register and returns value
 *
 *********************************************************************/
-uint32_t loRa_read_register
+uint8_t loRa_read_register
     (
     lora_registers register_address             /* register address */
     )
@@ -157,56 +147,28 @@ uint32_t loRa_read_register
 /*----------------------------------------------------------
 Local variables
 ----------------------------------------------------------*/
-uint32_t    message_return;  /* value of register             */
-uint8_t     number_in_fifo;  /* how many items remain in fifo */
+uint8_t rx_message[2];   /* receive message               */
+uint8_t tx_message[2];   /* transmit message              */
 
 /*----------------------------------------------------------
 Initilize local variables
 ----------------------------------------------------------*/
-message_return   = 0x00;
-number_in_fifo   = 0xFF;
+tx_message[ 0 ] = register_address;
+tx_message[ 1 ] = 0x00;
+rx_message[ 0 ] = 0xFF;
+rx_message[ 1 ] = 0xFF;
 
 /*----------------------------------------------------------
-Read from fifo until empty
+Transmit and Recive Request
 ----------------------------------------------------------*/
-while ( number_in_fifo != 0x00 )
-    {
-    number_in_fifo = SSIDataGetNonBlocking( s_spi_selected, &message_return );
-    }
+spi_write_read_blocking( s_spi_selected, tx_message, rx_message, 2 );
 
 /*----------------------------------------------------------
-Toggle CS low and put request
+Allow time for CS to toggle
 ----------------------------------------------------------*/
-s_data_port &= ~( s_data_pin );
-SSIDataPut( s_spi_selected, register_address );
+sleep_us( 10 );
 
-/*----------------------------------------------------------
-Wait for operation to complete
-----------------------------------------------------------*/
-while( SSIBusy( s_spi_selected ) )
-    {
-    }
-
-/*----------------------------------------------------------
-Put empty data to fill in timing gap and empty fifo
-----------------------------------------------------------*/
-SSIDataPut( s_spi_selected, 0x00 );
-SSIDataGet( s_spi_selected, &message_return );
-
-/*----------------------------------------------------------
-Wait for operation to complete
-----------------------------------------------------------*/
-while( SSIBusy( s_spi_selected ) )
-    {
-    }
-
-/*----------------------------------------------------------
-Pull from fifo and toggle CS
-----------------------------------------------------------*/
-SSIDataGet( s_spi_selected, &message_return );
-s_data_port |= s_data_pin;
-
-return message_return;
+return rx_message[1];
 
 } /* loRa_read_register() */
 
@@ -228,58 +190,30 @@ void loRa_write_register
 /*----------------------------------------------------------
 Local variables
 ----------------------------------------------------------*/
-uint32_t    message_return;  /* value of register             */
-uint8_t     number_in_fifo;  /* how many items remain in fifo */
+uint8_t message[2];      /* message to be passed to SPI   */
 
 /*----------------------------------------------------------
 Initilize local variables
 ----------------------------------------------------------*/
-message_return   = 0x00;
-number_in_fifo   = 0xFF;
+message[ 0 ] = ( SPI_WRITE_DATA_FLAG | register_address );
+message[ 1 ] = register_data;
 
 /*----------------------------------------------------------
-Read from fifo until empty
+Put request on SPI
 ----------------------------------------------------------*/
-while ( number_in_fifo != 0x00 )
-    {
-    number_in_fifo = SSIDataGetNonBlocking( s_spi_selected, &message_return );
-    }
-/*----------------------------------------------------------
-Toggle CS low and put request
-----------------------------------------------------------*/
-s_data_port &= ~( s_data_pin );
-SSIDataPut( s_spi_selected, ( SPI_WRITE_DATA_FLAG | register_address ) );
+spi_write_blocking( s_spi_selected, message, 2 );
 
 /*----------------------------------------------------------
-Wait for operation to complete
+Allow time for CS to toggle
 ----------------------------------------------------------*/
-while( SSIBusy( s_spi_selected ) )
-    {
-    }
-
-/*----------------------------------------------------------
-Write data to register
-----------------------------------------------------------*/
-SSIDataPut( s_spi_selected, register_data );
-
-/*----------------------------------------------------------
-Wait for operation to complete
-----------------------------------------------------------*/
-while( SSIBusy( s_spi_selected ) )
-    {
-    }
-
-/*----------------------------------------------------------
-Toggle CS
-----------------------------------------------------------*/
-s_data_port |= s_data_pin;
+sleep_us( 10 );
 
 /*----------------------------------------------------------
 Add delay if changing modes since this takes longer
 ----------------------------------------------------------*/
 if ( register_address == LORA_REGISTER_OP_MODE )
 	{
-	SysCtlDelay(2000000);
+	sleep_ms(300);
 	}
 
 	
@@ -296,31 +230,30 @@ if ( register_address == LORA_REGISTER_OP_MODE )
 *********************************************************************/
 void lora_port_init
     (
-    lora_config config_data                  /* SPI Interface info  */
+    spi_inst_t *spi                  /* SPI Interface info  */
     )
 {
 /*----------------------------------------------------------
 Initilize static variables
 ----------------------------------------------------------*/
-s_spi_selected = config_data.SSI_BASE;
-s_data_pin = config_data.SSI_PIN;
+s_spi_selected = spi;
 
 /*----------------------------------------------------------
-Verify port A selected for CS as it is the only port
-currently supported
+Setup port
 ----------------------------------------------------------*/
-if( config_data.SSI_PORT != PORT_A )
-    {
-    s_port_inited = false;
-    return;
-    }
+spi_init(s_spi_selected, 100000 );
+spi_set_format(s_spi_selected, 8, SPI_CPOL_0, SPI_CPHA_1, SPI_MSB_FIRST);
+gpio_set_function(PICO_DEFAULT_SPI_RX_PIN, GPIO_FUNC_SPI);
+gpio_set_function(PICO_DEFAULT_SPI_SCK_PIN, GPIO_FUNC_SPI);
+gpio_set_function(PICO_DEFAULT_SPI_TX_PIN, GPIO_FUNC_SPI);
+gpio_set_function(PICO_DEFAULT_SPI_CSN_PIN, GPIO_FUNC_SPI );
 
 /*----------------------------------------------------------
 Set port init variable to true for other functions
 ----------------------------------------------------------*/
 s_port_inited = true;
 
-}
+} /* lora_port_init() */
 
 
 /*********************************************************************
@@ -341,11 +274,14 @@ bool lora_init_tx
 /*----------------------------------------------------------
 Local variables
 ----------------------------------------------------------*/
-uint8_t config_register_data; /* configuration data       */
-uint8_t tx_fifo_ptr;          /* tx fifo pointer          */
-uint8_t return_value_verify;  /* verification value       */
-uint8_t power_modes;          /* power modes data         */
-
+uint8_t volatile config_register_data; /* configuration 
+                                          data            */
+uint8_t volatile tx_fifo_ptr;          /* tx fifo pointer */
+uint8_t volatile return_value_verify;  /* verification 
+                                          value           */
+uint8_t volatile power_modes;          /* power modes 
+                                          data            */
+ 
 /*----------------------------------------------------------
 Initilize local/static variables
 ----------------------------------------------------------*/
@@ -454,10 +390,12 @@ bool lora_init_continious_rx
 /*----------------------------------------------------------
 Local variables
 ----------------------------------------------------------*/
-uint8_t config_register_data; /* configuration data       */
-uint8_t rx_fifo_ptr;          /* rx fifo pointer          */
-uint8_t return_value_verify;  /* verification value       */
-uint8_t power_modes;          /* power modes data         */
+uint8_t volatile config_register_data; /* configuration 
+                                          data            */
+uint8_t volatile rx_fifo_ptr;          /* rx fifo pointer */
+uint8_t volatile return_value_verify;  /* verification 
+                                          value           */
+uint8_t volatile power_modes;          /* pwr modes data  */
 
 /*----------------------------------------------------------
 Initilize local/static variables
@@ -563,8 +501,8 @@ bool lora_send_message
 /*----------------------------------------------------------
 Local variables
 ----------------------------------------------------------*/
-uint8_t fifo_ptr_address;       /* fifo pointer address   */
-int i;                          /* interator              */
+uint8_t volatile fifo_ptr_address; /* fifo ptr address    */
+int i;                             /* interator           */
 
 /*----------------------------------------------------------
 Initilize local variables
@@ -657,9 +595,10 @@ bool lora_get_message
 /*----------------------------------------------------------
 Local variables
 ----------------------------------------------------------*/
-uint8_t flag_register_data;      /* data of flag register */
-uint8_t rx_fifo_ptr;             /* rx fifo pointer       */
-int i;                           /* interator             */
+uint8_t volatile flag_register_data; /* data of flag 
+                                        register          */
+uint8_t volatile rx_fifo_ptr;        /* rx fifo pointer   */
+int i;                               /* interator         */
 
 /*----------------------------------------------------------
 Initilize local variables
