@@ -1,10 +1,7 @@
 cmake_minimum_required(VERSION 3.13)
-
-# include(pico_sdk_import.cmake)
 project(loraAPI C ASM)
 
 set(CMAKE_C_STANDARD 11)
-# set(CMAKE_CXX_STANDARD 20)
 
 pico_sdk_init()
 
