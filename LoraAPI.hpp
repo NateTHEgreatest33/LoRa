@@ -1,9 +1,12 @@
+#ifndef LORA_API_HPP
+#define LORA_API_HPP
+
 /*********************************************************************
 *
 *   HEADER:
 *       header file for loraAPI
 *
-*   Copyright 2020 Nate Lenze
+*   Copyright 2024 Nate Lenze
 *
 *********************************************************************/
 
@@ -73,6 +76,7 @@ enum
     LORA_PAYLOAD_SIZE     = 0x22   /* rx payload size register      */
            
     };
+
 /*--------------------------------------------------------------------
                            MEMORY CONSTANTS
 --------------------------------------------------------------------*/
@@ -88,64 +92,28 @@ enum
 /*--------------------------------------------------------------------
                               PROCEDURES
 --------------------------------------------------------------------*/
-/*--------------------------------------------------------------------
-loraAPI.c
---------------------------------------------------------------------*/
-// void lora_port_init
-//     (
-//     spi_inst_t *spi                  /* SPI Interface info  */
-//     );
-
-bool lora_init_tx
-    (
-    void
-    );
-
-bool lora_init_continious_rx
-    (
-    void
-    );
-
-bool lora_send_message
-    (
-    uint8_t Message[],                    /* array of bytes to send */
-    uint8_t number_of_bytes               /* size of array          */
-    );
-
-bool lora_get_message
-    (
-    uint8_t *message,                  /* pointer to return message */
-    uint8_t size_of_message,           /* array size of message[]   */
-    uint8_t *size,                     /* size of return message    */
-    lora_errors *error                 /* pointer to error variable */
-    );
-
-/* LoraAPI.h */
-
-
-
-#ifndef LORA_API_HPP
-#define LORA_API_HPP
 
 /*--------------------------------------------------------------------
                                CLASSES
 --------------------------------------------------------------------*/
-namespace core {
+namespace core 
+{
 
-class loraInterface{
-public:
-    loraInterface( spi_inst_t* spi );
-    ~loraInterface();
-    bool init_tx();
-    bool init_continious_rx();
-    bool send_message( uint8_t Message[], uint8_t number_of_bytes );
-    bool get_message( uint8_t *message, uint8_t size_of_message, uint8_t *size, lora_errors *error );
-private:
-    uint8_t read_register( lora_registers register_address );
-    void write_register(lora_registers  register_address, uint8_t register_data );
-
-    spi_inst_t* p_spi_port;
-};
+class loraInterface
+    {
+    public:
+        loraInterface( spi_inst_t* spi );
+        ~loraInterface();
+        bool init_tx();
+        bool init_continious_rx();
+        bool send_message( uint8_t Message[], uint8_t number_of_bytes );
+        bool get_message( uint8_t *message, uint8_t size_of_message, uint8_t *size, lora_errors *error );
+    private:
+        uint8_t read_register( lora_registers register_address );
+        void write_register(lora_registers  register_address, uint8_t register_data );
+        spi_inst_t* p_spi_port;
+    };
 
 } /* core namespace */
+
 #endif

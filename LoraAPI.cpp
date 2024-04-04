@@ -108,8 +108,6 @@
 /*--------------------------------------------------------------------
                               VARIABLES
 --------------------------------------------------------------------*/
-static spi_inst_t* s_spi_selected = NULL;  /* SPI interface selected    */
-static bool s_port_inited         = false; /* Port selected T/F         */
 
 /*--------------------------------------------------------------------
                                 MACROS
@@ -118,154 +116,65 @@ static bool s_port_inited         = false; /* Port selected T/F         */
 /*--------------------------------------------------------------------
                               PROCEDURES
 --------------------------------------------------------------------*/
-uint8_t loRa_read_register
-    (
-    lora_registers register_address             /* register address */
-    );
-
-void loRa_write_register
-    (
-    lora_registers  register_address,           /* register address */
-    uint8_t         register_data               /* register data    */
-    );
 
 /*********************************************************************
 *
 *   PROCEDURE NAME:
-*       loRa_read_register
+*       loraInterface()
 *
 *   DESCRIPTION:
-*       Reads from selected register and returns value
+*       Constructor for loraInterface class
 *
 *********************************************************************/
-uint8_t loRa_read_register
+core::loraInterface::loraInterface
     (
-    lora_registers register_address             /* register address */
+    spi_inst_t *spi                  /* SPI Interface info  */
     )
 {
 /*----------------------------------------------------------
-Local variables
+Initilize port variable
 ----------------------------------------------------------*/
-uint8_t rx_message[2];   /* receive message               */
-uint8_t tx_message[2];   /* transmit message              */
+p_spi_port = spi;
 
 /*----------------------------------------------------------
-Initilize local variables
+Setup port
 ----------------------------------------------------------*/
-tx_message[ 0 ] = register_address;
-tx_message[ 1 ] = 0x00;
-rx_message[ 0 ] = 0xFF;
-rx_message[ 1 ] = 0xFF;
+spi_init(p_spi_port, 100000 );
+spi_set_format(p_spi_port, 8, SPI_CPOL_0, SPI_CPHA_1, SPI_MSB_FIRST);
+gpio_set_function(PICO_DEFAULT_SPI_RX_PIN, GPIO_FUNC_SPI);
+gpio_set_function(PICO_DEFAULT_SPI_SCK_PIN, GPIO_FUNC_SPI);
+gpio_set_function(PICO_DEFAULT_SPI_TX_PIN, GPIO_FUNC_SPI);
+gpio_set_function(PICO_DEFAULT_SPI_CSN_PIN, GPIO_FUNC_SPI );
 
-/*----------------------------------------------------------
-Transmit and Recive Request
-----------------------------------------------------------*/
-spi_write_read_blocking( s_spi_selected, tx_message, rx_message, 2 );
-
-/*----------------------------------------------------------
-Allow time for CS to toggle
-----------------------------------------------------------*/
-sleep_us( 10 );
-
-return rx_message[1];
-
-} /* loRa_read_register() */
-
-// /*********************************************************************
-// *
-// *   PROCEDURE NAME:
-// *       loRa_write_register
-// *
-// *   DESCRIPTION:
-// *       writes to a selected register
-// *
-// *********************************************************************/
-// void loRa_write_register
-//     (
-//     lora_registers  register_address,           /* register address */
-//     uint8_t         register_data               /* register data    */
-//     )
-// {
-// /*----------------------------------------------------------
-// Local variables
-// ----------------------------------------------------------*/
-// uint8_t message[2];      /* message to be passed to SPI   */
-
-// /*----------------------------------------------------------
-// Initilize local variables
-// ----------------------------------------------------------*/
-// message[ 0 ] = ( SPI_WRITE_DATA_FLAG | register_address );
-// message[ 1 ] = register_data;
-
-// /*----------------------------------------------------------
-// Put request on SPI
-// ----------------------------------------------------------*/
-// spi_write_blocking( s_spi_selected, message, 2 );
-
-// /*----------------------------------------------------------
-// Allow time for CS to toggle
-// ----------------------------------------------------------*/
-// sleep_us( 10 );
-
-// /*----------------------------------------------------------
-// Add delay if changing modes since this takes longer
-// ----------------------------------------------------------*/
-// if ( register_address == LORA_REGISTER_OP_MODE )
-// 	{
-// 	sleep_ms(300);
-// 	}
-
-	
-// } /* loRa_write_register() */
-
-// /*********************************************************************
-// *
-// *   PROCEDURE NAME:
-// *       lora_port_init
-// *
-// *   DESCRIPTION:
-// *       initize port used for LoRa data tranmission 
-// *
-// *********************************************************************/
-// void lora_port_init
-//     (
-//     spi_inst_t *spi                  /* SPI Interface info  */
-//     )
-// {
-// /*----------------------------------------------------------
-// Initilize static variables
-// ----------------------------------------------------------*/
-// s_spi_selected = spi;
-
-// /*----------------------------------------------------------
-// Setup port
-// ----------------------------------------------------------*/
-// spi_init(s_spi_selected, 100000 );
-// spi_set_format(s_spi_selected, 8, SPI_CPOL_0, SPI_CPHA_1, SPI_MSB_FIRST);
-// gpio_set_function(PICO_DEFAULT_SPI_RX_PIN, GPIO_FUNC_SPI);
-// gpio_set_function(PICO_DEFAULT_SPI_SCK_PIN, GPIO_FUNC_SPI);
-// gpio_set_function(PICO_DEFAULT_SPI_TX_PIN, GPIO_FUNC_SPI);
-// gpio_set_function(PICO_DEFAULT_SPI_CSN_PIN, GPIO_FUNC_SPI );
-
-// /*----------------------------------------------------------
-// Set port init variable to true for other functions
-// ----------------------------------------------------------*/
-// s_port_inited = true;
-
-// } /* lora_port_init() */
-
+} /* core::loraInterface::loraInterface() */
 
 /*********************************************************************
 *
 *   PROCEDURE NAME:
-*       lora_init_tx
+*       ~loraInterface()
+*
+*   DESCRIPTION:
+*       Deconstructor for loraInterface class
+*
+*********************************************************************/
+core::loraInterface::~loraInterface
+    (
+    void
+    )
+{
+} /* core::loraInterface::~loraInterface() */
+
+/*********************************************************************
+*
+*   PROCEDURE NAME:
+*       core::loraInterface::init_tx
 *
 *   DESCRIPTION:
 *       runs the proper steps to initilize lora into TX 
 *       continious mode
 *
 *********************************************************************/
-bool lora_init_tx
+bool core::loraInterface::init_tx
     (
     void
     )
@@ -298,14 +207,6 @@ config_register_data  = LORA_SLEEP_MODE;
 tx_fifo_ptr           = 0x00;
 return_value_verify   = 0x00;
 power_modes           = 0x00;
-
-/*----------------------------------------------------------
-Verify port selection has been made 
-----------------------------------------------------------*/
-if ( !s_port_inited )
-    {
-    return false;
-    }
 
 /*----------------------------------------------------------
 Configure into LoRa sleep mode and verify
@@ -369,19 +270,19 @@ if( return_value_verify !=  LORA_TX_MODE &&
     }
 		
 return true;
-} /* lora_init_tx() */
+} /* core::loraInterface::init_tx() */
 
 /*********************************************************************
 *
 *   PROCEDURE NAME:
-*       lora_init_continious_rx
+*       core::loraInterface::init_continious_rx
 *
 *   DESCRIPTION:
 *       runs the proper steps to initilize lora into RX 
 *       continious mode
 *
 *********************************************************************/
-bool lora_init_continious_rx
+bool core::loraInterface::init_continious_rx
     (
     void
     )
@@ -413,14 +314,6 @@ config_register_data  = LORA_SLEEP_MODE;
 rx_fifo_ptr           = 0x00;
 return_value_verify   = 0x00;
 power_modes           = 0x00;
-
-/*----------------------------------------------------------
-Verify port selection has been made 
-----------------------------------------------------------*/
-if ( !s_port_inited )
-    {
-    return false;
-    }
 
 /*----------------------------------------------------------
 Configure into LoRa sleep mode and verify
@@ -480,18 +373,21 @@ if( return_value_verify !=  LORA_RX_CONT_MODE )
 
 return true;
 
-} /* lora_init_continious_rx() */
+} /* core::loraInterface::init_continious_rx() */
+
+
+
 
 /*********************************************************************
 *
 *   PROCEDURE NAME:
-*       lora_send_message
+*       core::loraInterface::send_message
 *
 *   DESCRIPTION:
 *       send message
 *
 *********************************************************************/
-bool lora_send_message
+bool core::loraInterface::send_message
     (
     uint8_t Message[],                    /* array of bytes to send */
     uint8_t number_of_bytes               /* size of array          */
@@ -572,18 +468,18 @@ if( loRa_read_register( LORA_REGISTER_FLAGS ) != 0x00 )
 
 return true;
 
-} /* lora_send_message() */
+} /* core::loraInterface::send_message() */
 
 /*********************************************************************
 *
 *   PROCEDURE NAME:
-*       lora_get_message
+*       core::loraInterface::get_message
 *
 *   DESCRIPTION:
 *       recive message
 *
 *********************************************************************/
-bool lora_get_message
+bool core::loraInterface::get_message
     (
     uint8_t *message,                  /* pointer to return message */
     uint8_t size_of_message,           /* array size of message[]   */
@@ -699,48 +595,8 @@ else
     ----------------------------------------------------------*/
     return false;
     }
-} /* lora_get_message() */
+} /* core::loraInterface::get_message() */
 
-
-
-
-/*********************************************************************
-*
-*   PROCEDURE NAME:
-*       loraInterface()
-*
-*   DESCRIPTION:
-*       Constructor for loraInterface class
-*
-*********************************************************************/
-core::loraInterface::loraInterface
-    (
-    spi_inst_t *spi                  /* SPI Interface info  */
-    )
-{
-/*----------------------------------------------------------
-Initilize port variable
-----------------------------------------------------------*/
-p_spi_port = spi;
-
-/*----------------------------------------------------------
-Setup port
-----------------------------------------------------------*/
-spi_init(p_spi_port, 100000 );
-spi_set_format(p_spi_port, 8, SPI_CPOL_0, SPI_CPHA_1, SPI_MSB_FIRST);
-gpio_set_function(PICO_DEFAULT_SPI_RX_PIN, GPIO_FUNC_SPI);
-gpio_set_function(PICO_DEFAULT_SPI_SCK_PIN, GPIO_FUNC_SPI);
-gpio_set_function(PICO_DEFAULT_SPI_TX_PIN, GPIO_FUNC_SPI);
-gpio_set_function(PICO_DEFAULT_SPI_CSN_PIN, GPIO_FUNC_SPI );
-
-} /* core::loraInterface::loraInterface() */
-
-core::loraInterface::~loraInterface(){}
-
-bool core::loraInterface::init_tx(){}
-bool core::loraInterface::init_continious_rx(){}
-bool core::loraInterface::send_message( uint8_t Message[], uint8_t number_of_bytes ){}
-bool core::loraInterface::get_message( uint8_t *message, uint8_t size_of_message, uint8_t *size, lora_errors *error ){}
 
 
 /*********************************************************************
