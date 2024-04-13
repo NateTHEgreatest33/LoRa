@@ -128,13 +128,12 @@
 *********************************************************************/
 core::loraInterface::loraInterface
     (
-    spi_inst_t *spi                  /* SPI Interface info  */
-    )
+    spi_inst_t *spi,                /* SPI Interface info  */
+    core::console& c_ref            /* reference to global console */
+    ) :
+    p_console( c_ref ),
+    p_spi_port( spi )
 {
-/*----------------------------------------------------------
-Initilize port variable
-----------------------------------------------------------*/
-p_spi_port = spi;
 
 /*----------------------------------------------------------
 Setup port
@@ -211,9 +210,9 @@ power_modes           = 0x00;
 /*----------------------------------------------------------
 Configure into LoRa sleep mode and verify
 ----------------------------------------------------------*/
-loRa_write_register( LORA_REGISTER_OP_MODE, config_register_data );
+write_register( LORA_REGISTER_OP_MODE, config_register_data );
 
-config_register_data = loRa_read_register( LORA_REGISTER_OP_MODE ); 
+config_register_data = read_register( LORA_REGISTER_OP_MODE ); 
 
 if ( config_register_data != LORA_SLEEP_MODE )
     {
@@ -223,8 +222,8 @@ if ( config_register_data != LORA_SLEEP_MODE )
 /*----------------------------------------------------------
 Configure high power TX mode and verify
 ----------------------------------------------------------*/
-loRa_write_register( LORA_REGISTER_POWER, LORA_MAX_POWER_MODE );
-power_modes = loRa_read_register( LORA_REGISTER_POWER );
+write_register( LORA_REGISTER_POWER, LORA_MAX_POWER_MODE );
+power_modes = read_register( LORA_REGISTER_POWER );
 
 if( power_modes != LORA_MAX_POWER_MODE )
     {
@@ -244,10 +243,10 @@ three registers control this function:
 In case LORA_TX_FIFO_ADDR is modified, we always read it
 and set LORA_FIFO_ADDR_PTR accordingly.
 ----------------------------------------------------------*/
-tx_fifo_ptr = loRa_read_register ( LORA_TX_FIFO_ADDR );
-loRa_write_register( LORA_FIFO_ADDR_PTR, tx_fifo_ptr );
+tx_fifo_ptr = read_register ( LORA_TX_FIFO_ADDR );
+write_register( LORA_FIFO_ADDR_PTR, tx_fifo_ptr );
 
-return_value_verify = loRa_read_register( LORA_FIFO_ADDR_PTR );
+return_value_verify = read_register( LORA_FIFO_ADDR_PTR );
 if( tx_fifo_ptr != return_value_verify )
     {
     return false;
@@ -260,8 +259,8 @@ NOTE:
     We very mode is TX or Standby as after a succuessfull tx,
 		we will enter standby mode
 ----------------------------------------------------------*/
-loRa_write_register(LORA_REGISTER_OP_MODE, LORA_TX_MODE);
-return_value_verify = loRa_read_register( LORA_REGISTER_OP_MODE );
+write_register(LORA_REGISTER_OP_MODE, LORA_TX_MODE);
+return_value_verify = read_register( LORA_REGISTER_OP_MODE );
 		
 if( return_value_verify !=  LORA_TX_MODE && 
     return_value_verify !=  LORA_STBY_MODE  )
@@ -318,9 +317,9 @@ power_modes           = 0x00;
 /*----------------------------------------------------------
 Configure into LoRa sleep mode and verify
 ----------------------------------------------------------*/
-loRa_write_register( LORA_REGISTER_OP_MODE, config_register_data );
+write_register( LORA_REGISTER_OP_MODE, config_register_data );
 		
-config_register_data = loRa_read_register( LORA_REGISTER_OP_MODE );		
+config_register_data = read_register( LORA_REGISTER_OP_MODE );		
 
 if ( config_register_data != LORA_SLEEP_MODE )
     {
@@ -330,8 +329,8 @@ if ( config_register_data != LORA_SLEEP_MODE )
 /*----------------------------------------------------------
 Configure high power TX mode and verify
 ----------------------------------------------------------*/
-loRa_write_register( LORA_REGISTER_POWER, LORA_MAX_POWER_MODE );
-power_modes = loRa_read_register( LORA_REGISTER_POWER );
+write_register( LORA_REGISTER_POWER, LORA_MAX_POWER_MODE );
+power_modes = read_register( LORA_REGISTER_POWER );
 
 if( power_modes != LORA_MAX_POWER_MODE )
     {
@@ -351,10 +350,10 @@ three registers control this function:
 In case LORA_RX_FIFO_ADDR is modified, we always read it
 and set LORA_FIFO_ADDR_PTR accordingly.
 ----------------------------------------------------------*/
-rx_fifo_ptr = loRa_read_register ( LORA_RX_FIFO_ADDR );
-loRa_write_register( LORA_FIFO_ADDR_PTR, rx_fifo_ptr );
+rx_fifo_ptr = read_register ( LORA_RX_FIFO_ADDR );
+write_register( LORA_FIFO_ADDR_PTR, rx_fifo_ptr );
 
-return_value_verify = loRa_read_register( LORA_FIFO_ADDR_PTR );
+return_value_verify = read_register( LORA_FIFO_ADDR_PTR );
 if( rx_fifo_ptr != return_value_verify )
     {
     return false;
@@ -363,8 +362,8 @@ if( rx_fifo_ptr != return_value_verify )
 /*----------------------------------------------------------
 Set into RX continious mode and verify 
 ----------------------------------------------------------*/
-loRa_write_register(LORA_REGISTER_OP_MODE, LORA_RX_CONT_MODE);
-return_value_verify = loRa_read_register( LORA_REGISTER_OP_MODE );
+write_register(LORA_REGISTER_OP_MODE, LORA_RX_CONT_MODE);
+return_value_verify = read_register( LORA_REGISTER_OP_MODE );
 
 if( return_value_verify !=  LORA_RX_CONT_MODE )
     {
@@ -408,16 +407,16 @@ i                     = 0x00;
 /*----------------------------------------------------------
 Put into standby mode to fill fifo
 ----------------------------------------------------------*/
-loRa_write_register( LORA_REGISTER_OP_MODE, LORA_STBY_MODE);
+write_register( LORA_REGISTER_OP_MODE, LORA_STBY_MODE);
 
 /*----------------------------------------------------------
 Reset TX fifo 
 ----------------------------------------------------------*/
-fifo_ptr_address = loRa_read_register( LORA_TX_FIFO_ADDR );
+fifo_ptr_address = read_register( LORA_TX_FIFO_ADDR );
 
-loRa_write_register( LORA_FIFO_ADDR_PTR, fifo_ptr_address );
+write_register( LORA_FIFO_ADDR_PTR, fifo_ptr_address );
 
-if( loRa_read_register( LORA_FIFO_ADDR_PTR ) != fifo_ptr_address )
+if( read_register( LORA_FIFO_ADDR_PTR ) != fifo_ptr_address )
     {
     return false;
     }
@@ -427,15 +426,15 @@ Fill in fifo
 ----------------------------------------------------------*/
 for( i = 0; i < number_of_bytes; i++ )
     {
-    loRa_write_register( LORA_REGISTER_FIFO, Message[i] );
+    write_register( LORA_REGISTER_FIFO, Message[i] );
     }
 
 /*----------------------------------------------------------
 Set payload length to numBytes and verify
 ----------------------------------------------------------*/
-loRa_write_register( LORA_PAYLOAD_SIZE, number_of_bytes );
+write_register( LORA_PAYLOAD_SIZE, number_of_bytes );
 
-if( loRa_read_register( LORA_PAYLOAD_SIZE ) != number_of_bytes )
+if( read_register( LORA_PAYLOAD_SIZE ) != number_of_bytes )
     {
     return false;
     }
@@ -443,9 +442,9 @@ if( loRa_read_register( LORA_PAYLOAD_SIZE ) != number_of_bytes )
 /*----------------------------------------------------------
 Set into TX mode
 ----------------------------------------------------------*/
-loRa_write_register( LORA_REGISTER_OP_MODE, LORA_TX_MODE );
+write_register( LORA_REGISTER_OP_MODE, LORA_TX_MODE );
 
-if( loRa_read_register( LORA_REGISTER_OP_MODE ) != LORA_TX_MODE )
+if( read_register( LORA_REGISTER_OP_MODE ) != LORA_TX_MODE )
     {
     return false;
     }
@@ -453,15 +452,15 @@ if( loRa_read_register( LORA_REGISTER_OP_MODE ) != LORA_TX_MODE )
 /*----------------------------------------------------------
 Wait for TX to complete
 ----------------------------------------------------------*/
-while( ( loRa_read_register( LORA_REGISTER_FLAGS ) & LORA_TX_DONE_MASK ) != LORA_TX_DONE_MASK )
+while( ( read_register( LORA_REGISTER_FLAGS ) & LORA_TX_DONE_MASK ) != LORA_TX_DONE_MASK )
     {
     }
 /*----------------------------------------------------------
 Clear IRQ flags
 ----------------------------------------------------------*/
-loRa_write_register( LORA_REGISTER_FLAGS, LORA_TX_DONE_MASK );
+write_register( LORA_REGISTER_FLAGS, LORA_TX_DONE_MASK );
 
-if( loRa_read_register( LORA_REGISTER_FLAGS ) != 0x00 )
+if( read_register( LORA_REGISTER_FLAGS ) != 0x00 )
     {
     return false;
     }
@@ -511,7 +510,7 @@ Initilize variables
 /*----------------------------------------------------------
 Determine status of Rx
 ----------------------------------------------------------*/
-flag_register_data = loRa_read_register( LORA_REGISTER_FLAGS );
+flag_register_data = read_register( LORA_REGISTER_FLAGS );
 
 /*----------------------------------------------------------
 Determine if error is present
@@ -533,7 +532,7 @@ If errors are present, clear
 ----------------------------------------------------------*/
 if ( *error != RX_NO_ERROR )
     {
-    loRa_write_register( LORA_REGISTER_FLAGS, LORA_CLR_RX_ERR_FLAGS );
+    write_register( LORA_REGISTER_FLAGS, LORA_CLR_RX_ERR_FLAGS );
     }
 
 /*----------------------------------------------------------
@@ -551,18 +550,18 @@ if ( ( flag_register_data & LORA_RX_DONE_MASK ) == LORA_RX_DONE_MASK )
     /*----------------------------------------------------------
     get size
     ----------------------------------------------------------*/
-    *size = loRa_read_register( LORA_RX_COUNT );
+    *size = read_register( LORA_RX_COUNT );
 
     /*----------------------------------------------------------
     Clear header and rx flag
     ----------------------------------------------------------*/
-    loRa_write_register( LORA_REGISTER_FLAGS, LORA_CLR_RX_FLAG );
+    write_register( LORA_REGISTER_FLAGS, LORA_CLR_RX_FLAG );
 
     /*----------------------------------------------------------
     Get fifo pointer and update addresss
     ----------------------------------------------------------*/
-    rx_fifo_ptr = loRa_read_register( LORA_RX_CURR_ADDR );
-    loRa_write_register( LORA_FIFO_ADDR_PTR, rx_fifo_ptr );
+    rx_fifo_ptr = read_register( LORA_RX_CURR_ADDR );
+    write_register( LORA_FIFO_ADDR_PTR, rx_fifo_ptr );
 
     /*----------------------------------------------------------
     Verify message[] can fit message received
@@ -579,7 +578,7 @@ if ( ( flag_register_data & LORA_RX_DONE_MASK ) == LORA_RX_DONE_MASK )
         ----------------------------------------------------------*/
         for( i = 0; i < *size; i++ )
             {
-            message[i] = loRa_read_register( LORA_REGISTER_FIFO );
+            message[i] = read_register( LORA_REGISTER_FIFO );
             }
         }
 

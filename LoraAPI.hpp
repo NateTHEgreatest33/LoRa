@@ -18,6 +18,7 @@
 #include <stddef.h>
 
 #include "hardware/spi.h"
+#include "console.hpp"
 
 /*--------------------------------------------------------------------
                           LITERAL CONSTANTS
@@ -36,13 +37,6 @@ enum
     RX_INVALID_HEADER,                /* RX Invalid header          */
     RX_ARRAY_SIZE_ERR,                /* message is too big for passed
                                          in array                   */
-    RX_DOUBLE,                        /* more than one message was 
-                                         received at once           */
-    RX_SIZING,                        /* less than one message was 
-                                         received at once           */
-    RX_KEY_ERR,                       /* Invalid key                */
-    RX_INIT_ERR,                      /* Error initing rx mode      */
-    SPI_ERROR                         /* SPI comm error             */
     }; 
 
 
@@ -102,7 +96,7 @@ namespace core
 class loraInterface
     {
     public:
-        loraInterface( spi_inst_t* spi );
+        loraInterface( spi_inst_t* spi, core::console& c_ref );
         ~loraInterface();
         bool init_tx();
         bool init_continious_rx();
@@ -112,6 +106,7 @@ class loraInterface
         uint8_t read_register( lora_registers register_address );
         void write_register(lora_registers  register_address, uint8_t register_data );
         spi_inst_t* p_spi_port;
+        core::console& p_console;
     };
 
 } /* core namespace */
