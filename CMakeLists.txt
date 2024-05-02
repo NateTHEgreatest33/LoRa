@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 3.13)
-project(loraAPI CXX ASM)
+project(loraAPI C ASM)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_C_STANDARD 11)
 
 pico_sdk_init()
 
 add_library( loraAPI
-    LoraAPI.hpp
-    LoraAPI.cpp
+    LoraAPI.h
+    LoraAPI.c
     )
 
 target_link_libraries( loraAPI
@@ -16,7 +16,6 @@ target_link_libraries( loraAPI
   # Using Pico W
   pico_cyw43_arch_none
 
-  consoleAPI
 )
 
 target_include_directories(loraAPI PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
