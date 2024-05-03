@@ -71,36 +71,7 @@
 /*--------------------------------------------------------------------
                                 TYPES
 --------------------------------------------------------------------*/
-// typedef uint8_t lora_modes;     /* Operating Modes                  */
-// enum 
-//     {
-//     MODE_SLEEP,                 /* sleep mode                       */
-//     MODE_STBY,                  /* standby mode                     */
-//     MODE_FSTX,                  /* frequency sythesis transmit mode */
-//     MODE_TX,                    /* transmit mode                    */
-//     MODE_FSRX,                  /* frequency sythesis receive mode  */
-//     MODE_RXCONTINUOUS,          /* continious receive mode          */
-//     MODE_RXSINGLE,              /* single receive mode              */
-//     MODE_CAD                    /* preamble detect mode             */
-//     }; 
 
-// typedef uint8_t lora_registers; /* lora registers                   */
-// enum
-//     {
-//     LORA_REGISTER_OP_MODE = 0x01,  /* operating modes register      */
-//     LORA_REGISTER_FIFO    = 0x00,  /* fifo register                 */
-//     LORA_REGISTER_POWER   = 0x09,  /* power configuration register  */
-//     LORA_FIFO_ADDR_PTR    = 0x0D,  /* pointer to fifo buffer        */
-//     LORA_TX_FIFO_ADDR     = 0x0E,  /* base addrees for tx fifo      */
-//     LORA_RX_FIFO_ADDR     = 0x0F,  /* base address for rx fifo      */
-//     LORA_RX_CURR_ADDR     = 0x10,  /* current address in buffer for
-//                                       last rx'ed msg                */
-//     LORA_FLAGS_MASK       = 0x11,  /* masks for flag register       */
-//     LORA_REGISTER_FLAGS   = 0x12,  /* flags register                */
-//     LORA_RX_COUNT         = 0x13,  /* rx byte count register        */
-//     LORA_PAYLOAD_SIZE     = 0x22   /* rx payload size register      */
-           
-//     };
 /*--------------------------------------------------------------------
                            MEMORY CONSTANTS
 --------------------------------------------------------------------*/
