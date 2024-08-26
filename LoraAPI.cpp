@@ -217,6 +217,11 @@ and set LORA_FIFO_ADDR_PTR accordingly.
 tx_fifo_ptr = read_register ( LORA_TX_FIFO_ADDR );
 write_register( LORA_FIFO_ADDR_PTR, tx_fifo_ptr );
 
+/*----------------------------------------------------------
+Assert if TX fifo address is not as expected.
+----------------------------------------------------------*/
+p_console.add_assert( "tx/rx fifo's are not set-up as expected. This will cause issues if larger messages are tx'ed or rx'ed" , (tx_fifo_ptr != MAX_LORA_MSG_SIZE) );
+
 return_value_verify = read_register( LORA_FIFO_ADDR_PTR );
 if( tx_fifo_ptr != return_value_verify )
     {

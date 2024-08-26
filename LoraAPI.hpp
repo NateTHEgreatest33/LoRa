@@ -23,7 +23,20 @@
 /*--------------------------------------------------------------------
                           LITERAL CONSTANTS
 --------------------------------------------------------------------*/
-#define MAX_LORA_MSG_SIZE ( 16 )   /* Buffer size on lora tranciver */
+#define MAX_LORA_MSG_SIZE ( 128 )  /* according to RFM95 data-sheet:30,
+                                      by default, the 256 byte memory 
+                                      space reserved for the tx and rx 
+                                      fifo is split in two. (128 bytes
+                                      for each operation). However this
+                                      can be manually overwrriten by
+                                      writing to LORA_TX_FIFO_ADDR or
+                                      LORA_RX_FIFO_ADDR. LoraAPI is
+                                      designed to *read* from these
+                                      registers and use to setup TX
+                                      and RX. However if the chip was
+                                      used in a different way before, it
+                                      could cause this TX and RX buffer
+                                      size to differ. */
 
 /*--------------------------------------------------------------------
                                 TYPES
