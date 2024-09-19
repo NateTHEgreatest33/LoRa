@@ -68,7 +68,7 @@
 
 #define SPI_WRITE_DATA_FLAG     ( 0x80 )               /* SPI write flag    */
 
-#define LORA_FIFO_SIZE          ( 0x10 )              /* buffer size is 128 
+#define LORA_FIFO_SIZE          ( 0x80 )              /* buffer size is 128 
                                                                       bytes */
 
 /*--------------------------------------------------------------------
@@ -726,7 +726,7 @@ if ( ( flag_register_data & LORA_RX_DONE_MASK ) == LORA_RX_DONE_MASK )
     Update last fifo pointer variable and auto adjust for fifo
     rollover
     ----------------------------------------------------------*/
-    p_last_fifo_ptr = (rx_fifo_ptr + *size ) % LORA_FIFO_SIZE;
+    p_last_fifo_ptr = (fifo_read_idx + *size ) % LORA_FIFO_SIZE;
 
     /*----------------------------------------------------------
     Update fifo address pointer to point to the base address
