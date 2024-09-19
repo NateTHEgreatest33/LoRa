@@ -68,6 +68,9 @@
 
 #define SPI_WRITE_DATA_FLAG     ( 0x80 )               /* SPI write flag    */
 
+#define LORA_FIFO_SIZE          ( 0x10 )              /* buffer size is 128 
+                                                                      bytes */
+
 /*--------------------------------------------------------------------
                                 TYPES
 --------------------------------------------------------------------*/
@@ -115,6 +118,11 @@ gpio_set_function(PICO_DEFAULT_SPI_RX_PIN, GPIO_FUNC_SPI);
 gpio_set_function(PICO_DEFAULT_SPI_SCK_PIN, GPIO_FUNC_SPI);
 gpio_set_function(PICO_DEFAULT_SPI_TX_PIN, GPIO_FUNC_SPI);
 gpio_set_function(PICO_DEFAULT_SPI_CSN_PIN, GPIO_FUNC_SPI );
+
+/*----------------------------------------------------------
+Initilize last_fifo_ptr to base of FIFO
+----------------------------------------------------------*/
+p_last_fifo_ptr = 0x00;
 
 } /* core::loraInterface::loraInterface() */
 
@@ -289,6 +297,7 @@ config_register_data  = LORA_SLEEP_MODE;
 rx_fifo_ptr           = 0x00;
 return_value_verify   = 0x00;
 power_modes           = 0x00;
+p_last_fifo_ptr       = 0x00; //need to verify this is needed after tx/rx transfer
 
 /*----------------------------------------------------------
 Configure into LoRa sleep mode and verify
@@ -448,13 +457,13 @@ return true;
 /*********************************************************************
 *
 *   PROCEDURE NAME:
-*       core::loraInterface::get_message
+*       core::loraInterface::get_last_message
 *
 *   DESCRIPTION:
-*       recive message
+*       retrive the last message received from the lora fifo
 *
 *********************************************************************/
-bool core::loraInterface::get_message
+bool core::loraInterface::get_last_message
     (
     uint8_t *message,                  /* pointer to return message */
     uint8_t size_of_message,           /* array size of message[]   */
@@ -534,10 +543,196 @@ if ( ( flag_register_data & LORA_RX_DONE_MASK ) == LORA_RX_DONE_MASK )
     write_register( LORA_REGISTER_FLAGS, LORA_CLR_RX_FLAG );
 
     /*----------------------------------------------------------
-    Get fifo pointer and update addresss
+    Get last rx'ed fifo pointer and load that into the fifo 
+    address register for the SPI interface 
     ----------------------------------------------------------*/
     rx_fifo_ptr = read_register( LORA_RX_CURR_ADDR );
     write_register( LORA_FIFO_ADDR_PTR, rx_fifo_ptr );
+
+    /*----------------------------------------------------------
+    Verify message[] can fit message received
+    ----------------------------------------------------------*/
+    if( *size > size_of_message )
+        {
+        *error = RX_ARRAY_SIZE_ERR;
+        *size = 0;
+        }
+    else
+        {
+        /*----------------------------------------------------------
+        Tranfer message to array
+        ----------------------------------------------------------*/
+        for( i = 0; i < *size; i++ )
+            {
+            message[i] = read_register( LORA_REGISTER_FIFO );
+            }
+        }
+
+    /*----------------------------------------------------------
+    Return true for message received
+    ----------------------------------------------------------*/
+    return true;
+    }
+else
+    {
+    /*----------------------------------------------------------
+    Return false for no message received
+    ----------------------------------------------------------*/
+    return false;
+    }
+} /* core::loraInterface::get_last_message() */
+
+
+
+/*********************************************************************
+*
+*   PROCEDURE NAME:
+*       core::loraInterface::get_last_message
+*
+*   DESCRIPTION:
+*       retrive the entire contents of the lora fifo
+*
+*********************************************************************/
+bool core::loraInterface::get_message
+    (
+    uint8_t *message,                  /* pointer to return message */
+    uint8_t size_of_message,           /* array size of message[]   */
+    uint8_t *size,                     /* size of return message    */
+    lora_errors *error                 /* pointer to error variable */
+    )
+{
+/*----------------------------------------------------------
+Local variables
+----------------------------------------------------------*/
+uint8_t volatile flag_register_data; /* data of flag 
+                                        register          */
+uint8_t volatile rx_fifo_ptr;        /* rx fifo pointer   */
+uint8_t volatile rx_fifo_base_addr;  /* rx fifo base addr */
+uint8_t fifo_read_idx;               /* rx fifo index to 
+                                        begin reading     */
+int i;                               /* interator         */
+
+/*----------------------------------------------------------
+Initilize local variables
+----------------------------------------------------------*/
+flag_register_data  = 0x00;
+rx_fifo_ptr         = 0x00;
+i                   = 0x00;
+fifo_read_idx       = 0x00;
+
+/*----------------------------------------------------------
+Initilize variables
+----------------------------------------------------------*/
+*error    = RX_NO_ERROR;
+*size           = 0;
+
+/*----------------------------------------------------------
+Determine status of Rx
+----------------------------------------------------------*/
+flag_register_data = read_register( LORA_REGISTER_FLAGS );
+
+/*----------------------------------------------------------
+Determine if error is present
+----------------------------------------------------------*/
+
+if ( ( flag_register_data & LORA_CRC_ERROR_MASK ) == LORA_CRC_ERROR_MASK )
+    {
+    *error = RX_CRC_ERROR;
+    }
+else if ( ( flag_register_data & LORA_RX_TIMEOUT_MASK ) == LORA_RX_TIMEOUT_MASK )
+    {
+    *error = RX_TIMEOUT;
+    }
+/*----------------------------------------------------------
+If errors are present, clear
+----------------------------------------------------------*/
+if ( *error != RX_NO_ERROR )
+    {
+    write_register( LORA_REGISTER_FLAGS, LORA_CLR_RX_ERR_FLAGS );
+    }
+
+/*----------------------------------------------------------
+Determine if message has been received
+----------------------------------------------------------*/
+if ( ( flag_register_data & LORA_RX_DONE_MASK ) == LORA_RX_DONE_MASK )
+    {
+    /*----------------------------------------------------------
+    Verify header
+    ----------------------------------------------------------*/
+    if ( ( flag_register_data & LORA_VALID_HEADER_MASK ) != LORA_VALID_HEADER_MASK )
+        {
+        *error = RX_INVALID_HEADER;
+        }
+    /*----------------------------------------------------------
+    get size of last packet received
+    ----------------------------------------------------------*/
+    *size = read_register( LORA_RX_COUNT );
+
+    /*----------------------------------------------------------
+    Clear header and rx flag
+    ----------------------------------------------------------*/
+    write_register( LORA_REGISTER_FLAGS, LORA_CLR_RX_FLAG );
+
+    /*----------------------------------------------------------
+    Get current fifo pointer address and the base address to
+    determine how many messages were previously received
+    ----------------------------------------------------------*/
+    rx_fifo_ptr       = read_register( LORA_RX_CURR_ADDR );
+    rx_fifo_base_addr = read_register( LORA_RX_FIFO_ADDR ); //should always be 0?   //LORA_FIFO_ADDR_PTR //this is WRONG!!!
+
+
+    /*----------------------------------------------------------
+    Initilize read index to the most recent message base index
+    ----------------------------------------------------------*/
+    fifo_read_idx = rx_fifo_ptr;
+
+    /*----------------------------------------------------------
+    Aquire total size of buffer since last read using:
+
+    1) Last msg rx'ed starting index - rx_fifo_ptr
+    2) Last msg rx'ed size           - *size
+    3) fifo address since last read  - p_last_fifo_ptr
+
+    A) If the rx_fifo_ptr and p_last_fifo_ptr are not the same
+       then that means more than 1 message has been received
+
+    B) If rx_fifo_ptr < p_last_fifo_ptr than not only has more
+       than one message been received, but we rolled over the
+       fifo
+    ----------------------------------------------------------*/
+    if( p_last_fifo_ptr != rx_fifo_ptr )
+        {
+        /*----------------------------------------------------------
+        Check for rollover and adjust size calculation if there
+        has been a rollover of the fifo address. 
+        ----------------------------------------------------------*/
+        if( rx_fifo_ptr < p_last_fifo_ptr )
+            {
+            *size = ( *size ) + ( LORA_FIFO_SIZE - p_last_fifo_ptr ) + ( rx_fifo_ptr - rx_fifo_base_addr );
+            }
+        else
+            {
+            *size = ( *size ) + ( rx_fifo_ptr - p_last_fifo_ptr );
+            }
+        
+        /*----------------------------------------------------------
+        Update the fifo pointer to point to the start of the last
+        message we processed
+        ----------------------------------------------------------*/
+        fifo_read_idx = p_last_fifo_ptr;
+        }
+
+    /*----------------------------------------------------------
+    Update last fifo pointer variable and auto adjust for fifo
+    rollover
+    ----------------------------------------------------------*/
+    p_last_fifo_ptr = (rx_fifo_ptr + *size ) % LORA_FIFO_SIZE;
+
+    /*----------------------------------------------------------
+    Update fifo address pointer to point to the base address
+    so that we can empty the buffer
+    ----------------------------------------------------------*/
+    write_register( LORA_FIFO_ADDR_PTR, fifo_read_idx );
 
     /*----------------------------------------------------------
     Verify message[] can fit message received

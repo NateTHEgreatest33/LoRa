@@ -114,12 +114,15 @@ class loraInterface
         bool init_tx();
         bool init_continious_rx();
         bool send_message( uint8_t Message[], uint8_t number_of_bytes );
+        bool get_last_message( uint8_t *message, uint8_t size_of_message, uint8_t *size, lora_errors *error );
         bool get_message( uint8_t *message, uint8_t size_of_message, uint8_t *size, lora_errors *error );
+
     private:
         uint8_t read_register( lora_registers register_address );
         void write_register(lora_registers  register_address, uint8_t register_data );
         spi_inst_t* p_spi_port;
         core::console& p_console;
+        uint8_t p_last_fifo_ptr;
     };
 
 } /* core namespace */
