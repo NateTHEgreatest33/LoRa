@@ -608,7 +608,7 @@ uint8_t volatile flag_register_data; /* data of flag
                                         register          */
 uint8_t volatile rx_fifo_ptr;        /* rx fifo pointer   */
 uint8_t volatile rx_fifo_base_addr;  /* rx fifo base addr */
-uint8_t fifo_read_idx;               /* rx fifo index to 
+uint8_t volatile fifo_read_idx;      /* rx fifo index to 
                                         begin reading     */
 int i;                               /* interator         */
 
