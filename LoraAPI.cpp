@@ -395,6 +395,15 @@ Put into standby mode to fill fifo
 write_register( LORA_REGISTER_OP_MODE, LORA_STBY_MODE);
 
 /*----------------------------------------------------------
+Verify TX done flag is not set, and clear if set
+----------------------------------------------------------*/
+while( ( read_register( LORA_REGISTER_FLAGS ) & LORA_TX_DONE_MASK ) != 0x00 )
+    {
+    write_register( LORA_REGISTER_FLAGS, LORA_TX_DONE_MASK ); 
+    }
+
+
+/*----------------------------------------------------------
 Reset TX fifo 
 ----------------------------------------------------------*/
 fifo_ptr_address = read_register( LORA_TX_FIFO_ADDR );
@@ -425,14 +434,13 @@ if( read_register( LORA_PAYLOAD_SIZE ) != number_of_bytes )
     }
 
 /*----------------------------------------------------------
-Set into TX mode
+Set into TX mode. 
+
+We do not verify tx mode as the transceiver automatically 
+reverts to standby mode post TX. We "verify" the mode by 
+checking the tx done flag.
 ----------------------------------------------------------*/
 write_register( LORA_REGISTER_OP_MODE, LORA_TX_MODE );
-
-if( read_register( LORA_REGISTER_OP_MODE ) != LORA_TX_MODE )
-    {
-    return false;
-    }
 
 /*----------------------------------------------------------
 Wait for TX to complete
@@ -440,12 +448,13 @@ Wait for TX to complete
 while( ( read_register( LORA_REGISTER_FLAGS ) & LORA_TX_DONE_MASK ) != LORA_TX_DONE_MASK )
     {
     }
+
 /*----------------------------------------------------------
 Clear IRQ flags
 ----------------------------------------------------------*/
 write_register( LORA_REGISTER_FLAGS, LORA_TX_DONE_MASK );
 
-if( read_register( LORA_REGISTER_FLAGS ) != 0x00 )
+if( ( read_register( LORA_REGISTER_FLAGS ) & LORA_TX_DONE_MASK ) != 0x00 )
     {
     return false;
     }
