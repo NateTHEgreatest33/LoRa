@@ -13,8 +13,6 @@ add_library( loraAPI
 target_link_libraries( loraAPI
   pico_stdlib 
   hardware_spi
-  # Using Pico W
-  pico_cyw43_arch_none
 
   consoleAPI
 )
